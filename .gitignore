@@ -1,0 +1,6 @@
+/huggingface.co
+/data
+/outputs
+/results
+*/__pycache__
+*/*/__pycache__

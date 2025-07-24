@@ -1,0 +1,20 @@
+_target_: src.models.llama_model.LLaMAModel
+config:
+  type: llama
+  model_path: "./data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct"
+  tokenizer_path: "./data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct"
+  torch_dtype: float16
+  device_map: "cuda:0"
+  terminators:
+    - "<|eot_id|>"
+    - "<|end_of_text|>"
+  chat_template: "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n' + message['content'] + '<|eot_id|>' }}{% endfor %}{% if add_generation_prompt %}{{'<|start_header_id|>assistant<|end_header_id|>\n\n'}}{% endif %}"
+  generation_params:
+    max_new_tokens: 256
+    temperature: 0.3
+    top_p: 0.9
+    do_sample: true
+    eos_token_id: 128009
+    output_hidden_states: false
+    return_dict_in_generate: false
+  layer_num: 32

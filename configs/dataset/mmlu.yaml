@@ -1,0 +1,9 @@
+_target_: src.datasets.MMLUDataset
+config:
+  name: "mmlu"
+  dataset_path: "./data/datasets/cais/mmlu"
+  subject: "high_school_biology"
+  dev_split: "dev"
+  test_split: "test"
+  max_test_samples: 5000
+  random_seed: 42
