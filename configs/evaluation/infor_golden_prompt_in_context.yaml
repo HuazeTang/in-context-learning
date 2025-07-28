@@ -1,4 +1,4 @@
-_target_: src.evaluators.informatoin_in_context_golden_example_evaluator.InformationInContextGoldenExampleEvaluator
+_target_: src.evaluators.information_in_context_golden_example_prompt_evaluator.InformationInContextGoldenExamplePromptEvaluator
 config:
   name: "random_in_context"
   system_prompt: "You are an expert answering multiple choice questions. Analyze the question carefully and select the ONE correct option. Output ONLY the capital letter of your choice with NO additional text or explanation."
