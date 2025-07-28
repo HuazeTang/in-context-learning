@@ -28,8 +28,9 @@ class MMLUDataset(BaseDataset):
             return []
         
         # 使用datasets库的shuffle和select方法
-        seed = self.config.get('random_seed', 42)  # 默认种子保证可复现
-        shuffled_data = self.dev_data.shuffle(seed=seed)
+        # seed = self.config.get('random_seed', 42)  # 默认种子保证可复现
+        # shuffled_data = self.dev_data.shuffle(seed=seed)
+        shuffled_data = self.dev_data.shuffle()
         selected_data = shuffled_data.select(range(num_examples))
     
         return list(selected_data)
