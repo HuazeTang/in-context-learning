@@ -23,6 +23,10 @@ class LLaMAModel(BaseModel):
             elif terminator == self.tokenizer.eos_token:
                 terminator_ids.append(self.tokenizer.eos_token_id)
         
+        # 设置 pad_token_id
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+        
         if terminator_ids:
             self.generation_params["eos_token_id"] = terminator_ids  
     
@@ -62,11 +66,23 @@ class LLaMAModel(BaseModel):
         input_ids = self.tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
-            return_tensors="pt"
+            return_tensors="pt",
+            return_attention_mask=True,
+            padding=True,
         ).to(self.device)
+        if isinstance(input_ids, dict):
+            attention_mask = input_ids.get("attention_mask")
+            input_ids = input_ids["input_ids"]
+        else:
+            attention_mask = None
 
         # 设置生成参数
         generation_params = self.generation_params.copy()
+        generation_params["pad_token_id"] = self.tokenizer.pad_token_id
+
+        if attention_mask is not None:
+            generation_params["attention_mask"] = attention_mask
+        
         if return_hidden_states:
             generation_params["output_hidden_states"] = True
             generation_params["return_dict_in_generate"] = True
@@ -100,7 +116,7 @@ class LLaMAModel(BaseModel):
             }
         else:
             generated_ids = outputs[0][input_ids.shape[-1]:]
-            response = self.tokenizer.decode(response, skip_special_tokens=True)
+            response = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
 
             return {
                 "response": response,
