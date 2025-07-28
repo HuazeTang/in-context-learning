@@ -68,7 +68,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
 
         # 一次性采样所有的 samples
         all_few_samples = []
-        t = time.time()
+        # t = time.time()
         for _ in range(golden_examples_sample_times):
             (
                 all_xi_all_y_embeddings, 
@@ -80,7 +80,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
                 "all_xi_yi_embeddings": all_xi_yi_embeddings,
                 "few_shot_examples": few_shot_examples
             })
-        tt = time.time()
+        # tt = time.time()
 
         # 并行化评估sample质量
         last_layer_name = f"layer_{self.model.layer_num}"
@@ -109,8 +109,8 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         ## 找到最优的 lambda_1
         optimal_index = int(torch.argmin(batch_lambda_1).cpu().item())
 
-        ttt = time.time()
-        print(f"评估所有样本耗时: {ttt - tt}")
+        # ttt = time.time()
+        # print(f"评估所有样本耗时: {ttt - tt}")
 
         # 取得最优结果
         best_results = {

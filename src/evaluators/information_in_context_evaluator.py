@@ -229,7 +229,6 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             'rank': rank
         }
 
-
     def evaluate(self, output_dir: str = None) -> Tuple[float, List[Dict[str, Any]]]:
         """执行评估"""
         # 获取测试集
@@ -251,6 +250,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             few_shot_examples = single_case_result['few_shot_examples']
             lambda_1 = single_case_result['lambda_1'][last_layer_name].item()
             rank = single_case_result['rank'][last_layer_name].item()
+            response = single_case_result.get('response', 'none')
             
             true_answer = self.dataset.format_answer(test_item)
             pred_answer = chr(65+argmax_hat_P[last_layer_name].cpu().item())
@@ -280,7 +280,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
                 question=self.dataset.format_question(test_item),
                 true_answer=true_answer,
                 pred_answer=pred_answer,
-                response="none",
+                response=response,
                 is_correct=is_correct,
                 few_shot_prompt=self.build_few_shot_prompt(few_shot_examples),
                 hidden_states=None,
