@@ -4,7 +4,7 @@ config:
   model_path: "./data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct"
   tokenizer_path: "./data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct"
   torch_dtype: float16
-  device_map: "cuda:1"
+  device_map: "cuda:0"
   terminators:
     - "<|eot_id|>"
     - "<|end_of_text|>"
