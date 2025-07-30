@@ -1,3 +1,4 @@
+import os
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
@@ -29,11 +30,17 @@ def main(cfg: DictConfig):
     
     # 运行评估
     log.info("\nStarting evaluation...")
-    accuracy, results = evaluator.evaluate(output_dir=cfg.evaluation.config.output_dir)
-    
+    accuracy, results, output_path = evaluator.evaluate(output_dir=cfg.evaluation.config.output_dir)
+
+    # 输出结果    
     log.info(f"\nEvaluation completed. Accuracy: {accuracy:.4f}")
-    return accuracy
+
+    # 输出结果
+    log.info(f"Results saved to {output_path}")
+
+    return output_path
 
 
 if __name__ == "__main__":
-    main()
+    output_file_path = main()
+    print(output_file_path, flush=True)

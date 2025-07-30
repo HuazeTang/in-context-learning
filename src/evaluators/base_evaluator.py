@@ -45,7 +45,7 @@ class BaseEvaluator(ABC):
         self.logger = logger
         
     @abstractmethod
-    def evaluate(self, output_dir: str = None) -> Tuple[float, List[Dict[str, Any]]]:
+    def evaluate(self, output_dir: str = None) -> Tuple[float, List[Dict[str, Any]], str]:
         """
         执行评估
         
@@ -67,7 +67,7 @@ class BaseEvaluator(ABC):
         ):
         """保存评估结果"""
         if output_dir:
-            save_results({
+            output_path = save_results({
                 ACCURACY: accuracy,
                 CORRECT_TIMES: correct,
                 TOTAL_TIMES: total,
@@ -77,6 +77,7 @@ class BaseEvaluator(ABC):
                     EVALUATION_CONFIG: self.config
                 }
             }, output_dir)
+            return output_path
     
     def log_progress(self, current: int, total: int, correct: int):
         """记录评估进度"""

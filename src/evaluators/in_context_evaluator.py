@@ -99,6 +99,6 @@ class RandomInContextEvaluator(BaseEvaluator):
         self.log_final_results(accuracy, correct, total)
         
         # 保存结果
-        self.save_evaluation_results(accuracy, correct, total, results, output_dir)
+        output_path = self.save_evaluation_results(accuracy, correct, total, results, output_dir)
         
-        return accuracy, results
+        return accuracy, results, output_path

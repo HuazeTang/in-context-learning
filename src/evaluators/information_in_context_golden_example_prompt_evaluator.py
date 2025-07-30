@@ -54,11 +54,9 @@ class InformationInContextGoldenExamplePromptEvaluator(InformationInContextGolde
         result = self.generate_response(messages, extract_hidden_states=False)
         assert RESPONSE_MODEL in result, f"Response not found in result: {result.keys()}"
         response = result[RESPONSE_MODEL]
-        print(response)
 
         # 提取预测
         pred_answer = self.dataset.extract_prediction(response)
-        # print(pred_answer)
         # 将ABCD映射为0123
         option_mapping = {'A': torch.tensor(0), 'B': torch.tensor(1), 'C': torch.tensor(2), 'D': torch.tensor(3)}
         if pred_answer in option_mapping:
