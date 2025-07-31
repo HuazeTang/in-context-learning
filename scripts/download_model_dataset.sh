@@ -5,13 +5,24 @@ else
     mkdir -p data/datasets
     mkdir -p data/model_ckpts
 
-    mkdir -p data/model_ckpts/meta-llama
-    git clone https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct
+    if [ ! -d "data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct" ]; then
+        mkdir -p data/model_ckpts/meta-llama
+        git clone https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct
+    else
+        echo "Meta-Llama-3-8B-Instruct already exists"
+    fi
 
-    mkdir -p data/model_ckpts/Qwen
-    git clone https://huggingface.co/Qwen/Qwen3-8B data/model_ckpts/Qwen/Qwen3-8B
-    mv huggingface.co/Qwen/ data/model_ckpts
+    if [ ! -d "data/model_ckpts/Qwen/Qwen3-8B" ]; then
+        mkdir -p data/model_ckpts/Qwen
+        git clone https://huggingface.co/Qwen/Qwen3-8B data/model_ckpts/Qwen/Qwen3-8B data/model_ckpts/Qwen/Qwen3-8B
+    else
+        echo "Qwen3-8B already exists"
+    fi
 
-    mkdir -p data/datasets/cais/mmlu
-    git clone https://huggingface.co/datasets/cais/mmlu data/datasets/cais/mmlu
+    if [ ! -d "data/datasets/cais/mmlu" ]; then
+        mkdir -p data/datasets/cais/mmlu
+        git clone https://huggingface.co/datasets/cais/mmlu data/datasets/cais/mmlu
+    else
+        echo "mmlu already exists"
+    fi
 fi
