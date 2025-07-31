@@ -1,18 +1,33 @@
 from .base_dataset import BaseDataset
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from typing import List, Dict, Any, Union
 import re
+import random
 
 class MMLUDataset(BaseDataset):
     def _load_data(self):
         dataset_path = self.config.get('dataset_path', None)
-        subject = self.config.get('subject', 'high_school_biology')
-        if dataset_path:
-            self.test_data = load_dataset(dataset_path, subject)[self.config.get('test_split', 'test')]
-            self.dev_data = load_dataset(dataset_path, subject)[self.config.get('dev_split', 'dev')]
-        else:
-            self.test_data = load_dataset("cais/mmlu", subject)[self.config.get('test_split', 'test')]
-            self.dev_data = load_dataset("cais/mmlu", subject)[self.config.get('dev_split', 'dev')]
+        subject_list = self.config.get('subjects', None)
+        test_datasets = []
+        dev_datasets = []
+        
+        for subj in subject_list:
+            if dataset_path:
+                test_data = load_dataset(dataset_path, subj)[self.config.get('test_split', 'test')]
+                dev_data = load_dataset(dataset_path, subj)[self.config.get('dev_split', 'dev')]
+            else:
+                test_data = load_dataset("cais/mmlu", subj)[self.config.get('test_split', 'test')]
+                dev_data = load_dataset("cais/mmlu", subj)[self.config.get('dev_split', 'dev')]
+            
+            # 为每条数据添加subject信息
+            # test_data = test_data.add_column("subject", [subj] * len(test_data))
+            # dev_data = dev_data.add_column("subject", [subj] * len(dev_data))
+            
+            test_datasets.append(test_data)
+            dev_datasets.append(dev_data)
+        
+        self.test_data = concatenate_datasets(test_datasets)
+        self.dev_data = concatenate_datasets(dev_datasets)
         
         # 限制样本数
         if max_samples := self.config.get('max_test_samples'):
@@ -30,8 +45,11 @@ class MMLUDataset(BaseDataset):
         # 使用datasets库的shuffle和select方法
         # seed = self.config.get('random_seed', 42)  # 默认种子保证可复现
         # shuffled_data = self.dev_data.shuffle(seed=seed)
-        shuffled_data = self.dev_data.shuffle()
-        selected_data = shuffled_data.select(range(num_examples))
+        total_samples = len(self.dev_data)
+        selected_indices = random.sample(range(total_samples), num_examples)
+        selected_data = self.dev_data.select(selected_indices)
+        # shuffled_data = self.dev_data.shuffle()
+        # selected_data = shuffled_data.select(range(num_examples))
     
         return list(selected_data)
     
