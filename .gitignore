@@ -8,3 +8,4 @@
 .hopeignore
 /scripts/download_model_dataset_hope.sh
 /scripts/s3upload.sh
+*.txt
