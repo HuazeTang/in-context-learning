@@ -1,6 +1,6 @@
 _target_: src.evaluators.information_in_context_evaluator.RandomInforInContextEvaluator
 config:
-  name: "random_in_context"
+  name: "infor_random_in_context"
   system_prompt: "You are an expert answering multiple choice questions. Analyze the question carefully and select the ONE correct option. Output ONLY the capital letter of your choice with NO additional text or explanation."
   num_shots: 5
   output_dir: "${hydra:runtime.output_dir}/results/"
