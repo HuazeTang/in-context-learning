@@ -24,13 +24,13 @@ class InformationInContextGoldenExamplePromptEvaluator(InformationInContextGolde
     def evaluate_single_example(self, test_item: Dict[str, Any], extraction_layers: List[str]) -> Dict[str, Any]:
         """评估单个测试样例"""
         # 获得 \xi(x_Q)
-        xq_embeddings, _ = self.sample_embeddings(test_item)
+        xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers)
 
         # 采样并评估few-shot quality
         now_time = time.time()
 
         last_layer_name = f"layer_{self.model.layer_num}"
-        best_results = self.sample_and_evaluate_few_shot_quality(xq_embeddings)
+        best_results = self.sample_and_evaluate_few_shot_quality(xq_embeddings, extraction_layers)
         
         few_shot_examples = best_results["few_shot_examples"]
         lambda_1 = {

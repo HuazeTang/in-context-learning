@@ -32,18 +32,20 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         else:
             raise ValueError(f"Invalid pooling method: {method}")
 
-    def get_embedding(self, text: str, pool_methods: str="mean") -> torch.Tensor:
+    def get_embedding(self, text: str, extraction_layers: List[str], pool_methods: str="mean") -> torch.Tensor:
         """获取文本的embedding"""
         embeddings = self.model.get_embeddings(text)
 
         hidden_state = embeddings["embeddings"]
         pool_hidden_state = {}
         for k, v in hidden_state.items():
+            if k not in extraction_layers:
+                continue
             pool_hidden_state[k] = self.pool_embedding(v, pool_methods)
 
         return pool_hidden_state
 
-    def sample_embeddings(self, example: Dict[str, Any], pool_methods: str = "mean") -> Dict[str, torch.Tensor]:
+    def sample_embeddings(self, example: Dict[str, Any], extraction_layers: List[str], pool_methods: str = "mean") -> Dict[str, torch.Tensor]:
         """采样示例并输出归一化后的embeddings"""
         question = self.dataset.format_question(example)
         all_possible_y = self.dataset.get_all_possible_answers(example)
@@ -61,7 +63,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         for y_text in all_possible_y:
             xi_y_prompt = self.build_prompt_with_answer(question, y_text).strip()
             # xi_y_prompt = f"{question}\nAnswer: {y_text}\n\n".strip()
-            xi_y_text_embedding = self.get_embedding(xi_y_prompt, pool_methods)
+            xi_y_text_embedding = self.get_embedding(xi_y_prompt, extraction_layers, pool_methods)
             for k, v in xi_y_text_embedding.items():
                 assert len(v.shape) > 1, f"Invalid shape for embedding: {v.shape}"
                 if k not in xi_all_y_text_embeddings:
@@ -84,7 +86,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         
         return xi_all_y_text_embeddings, xi_yi_embeddings
 
-    def sample_few_shot_examples(self, pool_methods: str = "mean") -> List[Dict[str, Any]]:
+    def sample_few_shot_examples(self, extraction_layers: List[str], pool_methods: str = "mean") -> List[Dict[str, Any]]:
         """采样few-shot并输出归一化后的embeddings"""
         num_shots = self.config.get('num_shots', 5)
 
@@ -93,7 +95,10 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         all_xi_all_y_embeddings = dict()
         all_xi_yi_embeddings = dict()
         for example in few_shot_examples:
-            xi_all_y_text_embeddings_, xi_yi_embeddings_ = self.sample_embeddings(example, pool_methods)
+            (
+                xi_all_y_text_embeddings_, 
+                xi_yi_embeddings_
+            ) = self.sample_embeddings(example, extraction_layers, pool_methods)
             for k in xi_all_y_text_embeddings_.keys():
                 v_xi_all_y_text_embeddings_ = xi_all_y_text_embeddings_[k]
                 v_xi_yi_embeddings_ = xi_yi_embeddings_[k]
@@ -168,9 +173,9 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         lambda_1 = self.solve_lambda_1_Xq_Xi_dagger(Xi_pinv, xq_embeddings)
 
         return {
-            "alpha": alpha.cpu(),
-            "lambda_1": lambda_1.cpu(),
-            "rank": rank.cpu()
+            "alpha": alpha,
+            "lambda_1": lambda_1,
+            "rank": rank
         }
     
     def compute_predictions(self, xq_embeddings: Dict[str, Tensor], alpha: Dict[str, Tensor]) -> Dict[str, int]:
@@ -181,7 +186,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         }
         
         argmax_hat_P = {
-            k: torch.argmax(hat_P[k]) 
+            k: torch.argmax(hat_P[k]).cpu()
             for k in hat_P.keys()
         }
         
@@ -190,14 +195,14 @@ class RandomInforInContextEvaluator(BaseEvaluator):
     def evaluate_single_example(self, test_item: Dict[str, Any], extraction_layers: List[str]) -> Dict[str, Any]:
         """评估单个测试样例"""
         # 获得 \xi(x_Q)
-        xq_embeddings, _ = self.sample_embeddings(test_item)
+        xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers)
         
         # 获得 few shot example 的 \xi(x,y)
         (
             all_xi_all_y_embeddings, 
             all_xi_yi_embeddings, 
             few_shot_examples
-        ) = self.sample_few_shot_examples()
+        ) = self.sample_few_shot_examples(extraction_layers)
 
         # 计算每个层的 \bar{\xi}(x_i, y_i)
         mean_xi_yi_embeddings = {k: torch.mean(v, dim=0) for k, v in all_xi_yi_embeddings.items()}
@@ -213,8 +218,8 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             
             metrics = self.solve_metrics(all_xi_all_y_embeddings[k], mean_xi_yi_embeddings[k], xq_embeddings[k])
             alpha[k] = metrics['alpha']
-            lambda_1[k] = metrics['lambda_1']
-            rank[k] = metrics['rank']
+            lambda_1[k] = metrics['lambda_1'].cpu()
+            rank[k] = metrics['rank'].cpu()
         
         solve_time = time.time() - now_time
 

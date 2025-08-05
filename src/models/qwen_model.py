@@ -54,12 +54,12 @@ class QwenModel(BaseModel):
         embeddings = {}
         for layer_idx, layer_output in enumerate(outputs.hidden_states):
             if layers_to_extract is None or layer_idx in layers_to_extract:
-                embeddings[f"layer_{layer_idx}"] = layer_output.cpu().detach()
+                embeddings[f"layer_{layer_idx}"] = layer_output
         
         return {
             "embeddings": embeddings,
-            "input_ids": inputs.input_ids.cpu(),
-            "attention_mask": inputs.attention_mask.cpu() if "attention_mask" in inputs else None,
+            "input_ids": inputs.input_ids,
+            "attention_mask": inputs.attention_mask if "attention_mask" in inputs else None,
             "sequence_length": inputs.input_ids.shape[-1]
         }
     
