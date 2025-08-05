@@ -2,9 +2,10 @@ import time
 import torch
 from torch import Tensor
 from tqdm import tqdm
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Union
 from .base_evaluator import BaseEvaluator, RESPONSE_MODEL, HIDDEN_STATES_MODEL
 from enum import Enum
+from collections import defaultdict
 
 
 class RandomInforInContextEvaluator(BaseEvaluator):
@@ -32,59 +33,85 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         else:
             raise ValueError(f"Invalid pooling method: {method}")
 
-    def get_embedding(self, text: str, extraction_layers: List[str], pool_methods: str="mean") -> torch.Tensor:
+    def get_embedding(self, text: Union[str, List[str]], extraction_layers: List[str], pool_methods: str="mean") -> torch.Tensor:
         """获取文本的embedding"""
-        embeddings = self.model.get_embeddings(text)
-
-        hidden_state = embeddings["embeddings"]
-        pool_hidden_state = {}
-        for k, v in hidden_state.items():
-            if k not in extraction_layers:
-                continue
-            pool_hidden_state[k] = self.pool_embedding(v, pool_methods)
+        embeddings = self.model.get_embeddings(text) # 并行获取所有 embeddings
+        assert isinstance(embeddings, list), f"Invalid type for embeddings: {type(embeddings)}"
+        pool_hidden_state = []
+        
+        for single_embedding in embeddings:
+            hidden_state = single_embedding["embeddings"]
+            single_pool_hidden_state = {}
+            for k, v in hidden_state.items():
+                if k not in extraction_layers:
+                    continue
+                single_pool_hidden_state[k] = self.pool_embedding(v, pool_methods)
+            pool_hidden_state.append(single_pool_hidden_state)
 
         return pool_hidden_state
 
-    def sample_embeddings(self, example: Dict[str, Any], extraction_layers: List[str], pool_methods: str = "mean") -> Dict[str, torch.Tensor]:
-        """采样示例并输出归一化后的embeddings"""
-        question = self.dataset.format_question(example)
-        all_possible_y = self.dataset.get_all_possible_answers(example)
-
-        assert len(all_possible_y) > 0, f"No possible answers for example: {example}"
-
-        xi_all_y_text_embeddings = dict()
-        xi_yi_embeddings = dict()
-
-        y_index = self.dataset.get_ground_truth_index(example)
-        assert y_index is not None, \
-            f"Invalid ground truth index for example: {example}. \
-            Maybe the answer for the dataset is not countable."
-
-        for y_text in all_possible_y:
-            xi_y_prompt = self.build_prompt_with_answer(question, y_text).strip()
-            # xi_y_prompt = f"{question}\nAnswer: {y_text}\n\n".strip()
-            xi_y_text_embedding = self.get_embedding(xi_y_prompt, extraction_layers, pool_methods)
-            for k, v in xi_y_text_embedding.items():
-                assert len(v.shape) > 1, f"Invalid shape for embedding: {v.shape}"
-                if k not in xi_all_y_text_embeddings:
-                    xi_all_y_text_embeddings[k] = [v]
-                else:
-                    xi_all_y_text_embeddings[k].append(v)
+    def collect_embeddings(self, current_example_batch_embeddings: List[Dict[str, torch.Tensor]], true_y_index: int):
+        xi_all_y_text_embeddings = defaultdict(list)
+        for xi_y_text_embedding in current_example_batch_embeddings:
+            for layer_name, embedding in xi_y_text_embedding.items():
+                assert len(embedding.shape) > 1, f"Invalid shape for embedding: {embedding.shape}"
+                xi_all_y_text_embeddings[layer_name].append(embedding)
         
-        # stack all embeddings and normalize according to y
-        for k, v in xi_all_y_text_embeddings.items():
-            v_all_y = torch.cat(v, dim=0) # shape: (num_y, K)
-            # normalize
-            v_all_y = v_all_y - torch.mean(v_all_y, dim=0, keepdim=True)
-            norms = torch.norm(v_all_y, dim=0, keepdim=True)
-            # 避免除零
-            norms = torch.where(norms == 0, torch.ones_like(norms), norms)
-            xi_all_y_text_embeddings[k] = v_all_y / norms
+        # 转换为普通字典并处理embeddings
+        xi_all_y_text_embeddings = dict(xi_all_y_text_embeddings)
+        xi_yi_embeddings = {}
+
+        for layer_name, embeddings_list in xi_all_y_text_embeddings.items():
+            # stack所有embeddings并标准化
+            emb_all_y = torch.cat(embeddings_list, dim=0)  # shape: (num_y, K)
+
+                # 标准化处理
+            emb_all_y = emb_all_y - torch.mean(emb_all_y, dim=0, keepdim=True)
+            norms = torch.norm(emb_all_y, dim=0, keepdim=True)
+            norms = torch.where(norms == 0, torch.ones_like(norms), norms) # 避免除零
+            xi_all_y_text_embeddings[layer_name] = emb_all_y / norms
 
             # get yi embedding
-            xi_yi_embeddings[k] = xi_all_y_text_embeddings[k][y_index]
+            xi_yi_embeddings[layer_name] = xi_all_y_text_embeddings[layer_name][true_y_index]
         
         return xi_all_y_text_embeddings, xi_yi_embeddings
+    
+    def sample_embeddings(
+            self, 
+            examples: Union[List[Dict[str, Any]], Dict[str, Any]], 
+            extraction_layers: List[str], 
+            pool_methods: str = "mean"
+        ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
+        """采样示例并输出归一化后的embeddings"""
+        if isinstance(examples, dict):
+            examples = [examples]
+        
+        all_xi_all_y_text_embeddings, all_xi_yi_embeddings = [], []
+        
+        for example in examples:
+            question = self.dataset.format_question(example)
+            all_possible_y = self.dataset.get_all_possible_answers(example)
+
+            assert len(all_possible_y) > 0, f"No possible answers for example: {example}"
+
+            true_y_index = self.dataset.get_ground_truth_index(example)
+            assert true_y_index is not None, \
+                f"Invalid ground truth index for example: {example}. \
+                Maybe the answer for the dataset is not countable."
+
+            # 构建并行prompt
+            prompts = [self.build_prompt_with_answer(question, y).strip() for y in all_possible_y]
+            # 并行获取所有 embeddings
+            batch_embeddings = self.get_embedding(prompts, extraction_layers, pool_methods) 
+
+            xi_all_y_text_embeddings, xi_yi_embeddings = self.collect_embeddings(
+                batch_embeddings, true_y_index
+            )
+
+            all_xi_all_y_text_embeddings.append(xi_all_y_text_embeddings)
+            all_xi_yi_embeddings.append(xi_yi_embeddings)
+        
+        return all_xi_all_y_text_embeddings, all_xi_yi_embeddings
 
     def sample_few_shot_examples(self, extraction_layers: List[str], pool_methods: str = "mean") -> List[Dict[str, Any]]:
         """采样few-shot并输出归一化后的embeddings"""
@@ -92,27 +119,20 @@ class RandomInforInContextEvaluator(BaseEvaluator):
 
         few_shot_examples = self.dataset.get_few_shot_examples(num_shots)
 
-        all_xi_all_y_embeddings = dict()
-        all_xi_yi_embeddings = dict()
-        for example in few_shot_examples:
-            (
-                xi_all_y_text_embeddings_, 
-                xi_yi_embeddings_
-            ) = self.sample_embeddings(example, extraction_layers, pool_methods)
+        all_xi_all_y_embeddings = defaultdict(list)
+        all_xi_yi_embeddings = defaultdict(list)
+        all_xi_all_y_text_embeddings_, all_xi_yi_embeddings_ = self.sample_embeddings(
+            few_shot_examples, extraction_layers, pool_methods
+        )
+        for xi_all_y_text_embeddings_, xi_yi_embeddings_ in zip(all_xi_all_y_text_embeddings_, all_xi_yi_embeddings_):
             for k in xi_all_y_text_embeddings_.keys():
-                v_xi_all_y_text_embeddings_ = xi_all_y_text_embeddings_[k]
-                v_xi_yi_embeddings_ = xi_yi_embeddings_[k]
+                all_xi_all_y_embeddings[k].append(xi_all_y_text_embeddings_[k])
+                all_xi_yi_embeddings[k].append(xi_yi_embeddings_[k])
 
-                if k not in all_xi_all_y_embeddings.keys():
-                    all_xi_all_y_embeddings[k] = [v_xi_all_y_text_embeddings_]
-                else:
-                    all_xi_all_y_embeddings[k].append(v_xi_all_y_text_embeddings_)
-                
-                if k not in all_xi_yi_embeddings.keys():
-                    all_xi_yi_embeddings[k] = [v_xi_yi_embeddings_]
-                else:
-                    all_xi_yi_embeddings[k].append(v_xi_yi_embeddings_)
-    
+        # 转换为普通字典并处理embeddings
+        all_xi_all_y_embeddings = dict(all_xi_all_y_embeddings)
+        all_xi_yi_embeddings = dict(all_xi_yi_embeddings)
+
         for k in all_xi_all_y_embeddings.keys():
             all_xi_all_y_embeddings[k] = torch.stack(all_xi_all_y_embeddings[k], dim=0)
             all_xi_yi_embeddings[k] = torch.stack(all_xi_yi_embeddings[k], dim=0)
@@ -196,6 +216,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         """评估单个测试样例"""
         # 获得 \xi(x_Q)
         xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers)
+        xq_embeddings = xq_embeddings[0]
         
         # 获得 few shot example 的 \xi(x,y)
         (

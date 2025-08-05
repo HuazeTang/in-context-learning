@@ -128,6 +128,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         """评估单个测试样例"""
         # 获得 \xi(x_Q)
         xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers)
+        xq_embeddings = xq_embeddings[0]
 
         # 采样并评估few-shot quality
         now_time = time.time()

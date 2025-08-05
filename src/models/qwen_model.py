@@ -1,5 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from .base_model import BaseModel
+from .llama_model import LLaMAModel
 import torch
 from torch import Tensor
 from typing import Dict, Optional
@@ -7,7 +8,7 @@ from typing import Dict, Optional
 THINK_TAG = "</think>"
 THINK_TAG_INDEX = 151668 # this is the index of "</think>" in tokenizer
 
-class QwenModel(BaseModel):
+class QwenModel(LLaMAModel):
     def load_model(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.tokenizer_path)
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -31,37 +32,6 @@ class QwenModel(BaseModel):
         
         # 设置思考模式
         self.enable_thinking = self.config.enable_thinking if hasattr(self.config, "enable_thinking") else False
-    
-    def get_embeddings(self, text: str, layers_to_extract: Optional[int] = None) -> Dict[str, Tensor]:
-        """ 
-        获取文本的逐层embedding
-        
-        Args:
-            text: 输入文本
-            layers_to_extract: 要提取的层索引列表，None表示提取所有层
-            
-        Returns:
-            dict: 包含每层embedding的字典
-        """
-        # 对文本进行tokenize
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
-        
-        # 通过模型获取hidden states
-        with torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True)
-        
-        # 提取每层的hidden states
-        embeddings = {}
-        for layer_idx, layer_output in enumerate(outputs.hidden_states):
-            if layers_to_extract is None or layer_idx in layers_to_extract:
-                embeddings[f"layer_{layer_idx}"] = layer_output
-        
-        return {
-            "embeddings": embeddings,
-            "input_ids": inputs.input_ids,
-            "attention_mask": inputs.attention_mask if "attention_mask" in inputs else None,
-            "sequence_length": inputs.input_ids.shape[-1]
-        }
     
     def generate(self, messages, return_hidden_states=False, layers_to_extract=None):
         # 应用聊天模板

@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from .base_model import BaseModel
 import torch
 from torch import Tensor
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Union
 
 class LLaMAModel(BaseModel):
     def load_model(self):
@@ -30,7 +30,7 @@ class LLaMAModel(BaseModel):
         if terminator_ids:
             self.generation_params["eos_token_id"] = terminator_ids  
     
-    def get_embeddings(self, text: str, layers_to_extract: Optional[int] = None) -> Dict[str, Tensor]:
+    def get_embeddings(self, texts: Union[str, List[str]], layers_to_extract: Optional[int] = None) -> Dict[str, Tensor]:
         """ 
         获取文本的逐层embedding
         
@@ -42,24 +42,36 @@ class LLaMAModel(BaseModel):
             dict: 包含每层embedding的字典
         """
         # 对文本进行tokenize
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
+        # 自动设置 batch size（可手动设置或做 chunk）
+        MAX_BATCH_SIZE = 32  # 可调整：V100 推荐每次 8~32 个句子（依句长）
+        if isinstance(texts, str):
+           texts = [texts]
+        results = []
+
+        for i in range(0, len(texts), MAX_BATCH_SIZE):
+            batch_texts = texts[i:max(i + MAX_BATCH_SIZE, len(texts))]
+            batch_size = len(batch_texts)
+            inputs = self.tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
         
-        # 通过模型获取hidden states
-        with torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True)
+            # 通过模型获取hidden states
+            with torch.no_grad():
+                outputs = self.model(**inputs, output_hidden_states=True)
+
+            for b in range(batch_size):
+                # 提取每层的hidden states
+                embeddings = {}
+                for layer_idx, layer_output in enumerate(outputs.hidden_states):
+                    if layers_to_extract is None or layer_idx in layers_to_extract:
+                        embeddings[f"layer_{layer_idx}"] = layer_output[b].unsqueeze(0)
+            
+                results.append({
+                    "embeddings": embeddings,
+                    "input_ids": inputs.input_ids[b].unsqueeze(0),
+                    "attention_mask": inputs.attention_mask[b] if "attention_mask" in inputs else None,
+                    "sequence_length": inputs.input_ids[b].shape[-1]
+                })
         
-        # 提取每层的hidden states
-        embeddings = {}
-        for layer_idx, layer_output in enumerate(outputs.hidden_states):
-            if layers_to_extract is None or layer_idx in layers_to_extract:
-                embeddings[f"layer_{layer_idx}"] = layer_output
-        
-        return {
-            "embeddings": embeddings,
-            "input_ids": inputs.input_ids,
-            "attention_mask": inputs.attention_mask if "attention_mask" in inputs else None,
-            "sequence_length": inputs.input_ids.shape[-1]
-        }
+        return results
     
     def generate(self, messages, return_hidden_states=False, layers_to_extract=None):
         # 应用聊天模板
