@@ -3,6 +3,7 @@ config:
   name: "mmlu"
   dataset_path: "./data/datasets/cais/mmlu"
   subjects: 
+    # - "all"
     - "high_school_biology"
     - "high_school_chemistry"  
     - "high_school_physics"
