@@ -80,7 +80,7 @@ class InformationInContextExampleCompareEvaluator(InformationInContextGoldenExam
         now_time = time.time()
 
         last_layer_name = f"layer_{self.model.layer_num}"
-        all_results = self.sample_and_evaluate_few_shot_quality(xq_embeddings, extraction_layers)
+        all_example_results = self.sample_and_evaluate_few_shot_quality(xq_embeddings, extraction_layers)
 
         golden_examples_sample_times = self.config.get("golden_examples_sample_times", 10)
 
@@ -89,12 +89,12 @@ class InformationInContextExampleCompareEvaluator(InformationInContextGoldenExam
         best_lambda_1 = None
         best_rank = None
         best_few_shot_examples = None
-        for i in golden_examples_sample_times:
-            Xi_pinv = all_results["Xi_pinv"][i].to(self.model.device)
-            all_xi_yi_embeddings = all_results["all_xi_yi_embeddings"][i][last_layer_name].to(self.model.device)
-            few_shot_examples = all_results["few_shot_examples"][i]
-            lambda_1 = {last_layer_name: all_results["lambda_1"][i]}
-            Xi_matrix = all_results["Xi_matrix"][i].to(self.model.device)
+        for i in range(golden_examples_sample_times):
+            Xi_pinv = all_example_results["Xi_pinv"][i].to(self.model.device)
+            all_xi_yi_embeddings = all_example_results["all_xi_yi_embeddings"][i][last_layer_name].to(self.model.device)
+            few_shot_examples = all_example_results["few_shot_examples"][i]
+            lambda_1 = {last_layer_name: all_example_results["lambda_1"][i]}
+            Xi_matrix = all_example_results["Xi_matrix"][i].to(self.model.device)
             rank = {last_layer_name: torch.linalg.matrix_rank(Xi_matrix)}
 
             # 计算每个层的 \bar{\xi}(x_i, y_i)
