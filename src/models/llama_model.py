@@ -62,7 +62,7 @@ class LLaMAModel(BaseModel):
                 embeddings = {}
                 for layer_idx, layer_output in enumerate(outputs.hidden_states):
                     if layers_to_extract is None or layer_idx in layers_to_extract:
-                        embeddings[f"layer_{layer_idx}"] = layer_output[b].unsqueeze(0)
+                        embeddings[f"layer_{layer_idx}"] = layer_output[b].unsqueeze(0).float()
             
                 results.append({
                     "embeddings": embeddings,
