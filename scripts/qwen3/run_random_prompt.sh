@@ -1,7 +1,7 @@
-bash scripts/download_model_dataset.sh
-
 model="qwen3-8b"
 dataset="mmlu"
+bash scripts/download_model_dataset.sh ${model} ${dataset}
+
 method="random_prompt"
 experiment_name="${model}_${dataset}_${method}"
 

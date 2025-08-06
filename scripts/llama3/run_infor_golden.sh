@@ -1,7 +1,7 @@
-bash scripts/download_model_dataset.sh
-
 model="llama3-8b"
 dataset="mmlu"
+bash scripts/download_model_dataset.sh ${model} ${dataset}
+
 method="infor-golden"
 experiment_name="${model}_${dataset}_${method}"
 
