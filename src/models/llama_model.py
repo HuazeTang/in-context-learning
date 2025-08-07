@@ -30,8 +30,9 @@ class LLaMAModel(BaseModel):
         if terminator_ids:
             self.generation_params["eos_token_id"] = terminator_ids  
     
+    @torch.inference_mode()
     def get_embeddings(self, texts: Union[str, List[str]], layers_to_extract: Optional[int] = None) -> Dict[str, Tensor]:
-        """ 
+        """
         获取文本的逐层embedding
         
         Args:
@@ -43,7 +44,7 @@ class LLaMAModel(BaseModel):
         """
         # 对文本进行tokenize
         # 自动设置 batch size（可手动设置或做 chunk）
-        MAX_BATCH_SIZE = 32  # 可调整：V100 推荐每次 8~32 个句子（依句长）
+        MAX_BATCH_SIZE = 32 
         if isinstance(texts, str):
            texts = [texts]
         results = []
@@ -52,7 +53,7 @@ class LLaMAModel(BaseModel):
             batch_texts = texts[i:max(i + MAX_BATCH_SIZE, len(texts))]
             batch_size = len(batch_texts)
             inputs = self.tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
-        
+
             # 通过模型获取hidden states
             with torch.no_grad():
                 outputs = self.model(**inputs, output_hidden_states=True)
@@ -63,7 +64,7 @@ class LLaMAModel(BaseModel):
                 for layer_idx, layer_output in enumerate(outputs.hidden_states):
                     if layers_to_extract is None or layer_idx in layers_to_extract:
                         embeddings[f"layer_{layer_idx}"] = layer_output[b].unsqueeze(0).float()
-            
+
                 results.append({
                     "embeddings": embeddings,
                     "input_ids": inputs.input_ids[b].unsqueeze(0),
@@ -94,7 +95,7 @@ class LLaMAModel(BaseModel):
 
         if attention_mask is not None:
             generation_params["attention_mask"] = attention_mask
-        
+
         if return_hidden_states:
             generation_params["output_hidden_states"] = True
             generation_params["return_dict_in_generate"] = True

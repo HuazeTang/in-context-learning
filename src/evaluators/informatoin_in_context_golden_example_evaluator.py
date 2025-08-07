@@ -62,7 +62,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
 
         return lambda_1
     
-    def sample_and_evaluate_few_shot_quality(self, xq_embeddings: Dict[str, Tensor], extraction_layers: List[str]):
+    def sample_and_evaluate_few_shot_quality(self, xq_embeddings: Dict[str, Tensor], extraction_layers: List[str], pool_method: str):
         golden_examples_sample_times = self.config.get("golden_examples_sample_times", 10)
         best_results = {}
 
@@ -74,7 +74,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
                 all_xi_all_y_embeddings, 
                 all_xi_yi_embeddings, 
                 few_shot_examples
-            ) = self.sample_few_shot_examples(extraction_layers)
+            ) = self.sample_few_shot_examples(extraction_layers, pool_method)
             all_few_samples.append({
                 "all_xi_all_y_embeddings": all_xi_all_y_embeddings,
                 "all_xi_yi_embeddings": all_xi_yi_embeddings,
@@ -124,17 +124,17 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         
         return best_results
 
-    def evaluate_single_example(self, test_item: Dict[str, Any], extraction_layers: List[str]) -> Dict[str, Any]:
+    def evaluate_single_example(self, test_item: Dict[str, Any], extraction_layers: List[str], pool_method: str) -> Dict[str, Any]:
         """评估单个测试样例"""
         # 获得 \xi(x_Q)
-        xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers)
+        xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers, pool_method)
         xq_embeddings = xq_embeddings[0]
 
         # 采样并评估few-shot quality
         now_time = time.time()
 
         last_layer_name = f"layer_{self.model.layer_num}"
-        best_results = self.sample_and_evaluate_few_shot_quality(xq_embeddings, extraction_layers)
+        best_results = self.sample_and_evaluate_few_shot_quality(xq_embeddings, extraction_layers, pool_method)
         
         Xi_pinv = best_results["Xi_pinv"].to(self.model.device)
         all_xi_yi_embeddings = best_results["all_xi_yi_embeddings"][last_layer_name].to(self.model.device)

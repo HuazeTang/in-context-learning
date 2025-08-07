@@ -5,3 +5,4 @@ config:
   num_shots: 5
   output_dir: "${hydra:runtime.output_dir}/results/"
   extract_hidden_states: false 
+  pool_method: "last"

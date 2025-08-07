@@ -6,3 +6,4 @@ config:
   output_dir: "${hydra:runtime.output_dir}/results/"
   extract_hidden_states: false 
   golden_examples_sample_times: 10
+  pool_method: "last"
