@@ -5,7 +5,7 @@ bash scripts/download_model_dataset.sh ${model} ${dataset}
 method="random_prompt"
 experiment_name="${model}_${dataset}_${method}"
 
-mkdir -p "log/${experiment_name}.txt"
+mkdir -p log
 python3 main.py evaluation=random_in_context | tee "log/${experiment_name}.txt"
 
 if [ -f "scripts/s3upload.sh" ]; then
