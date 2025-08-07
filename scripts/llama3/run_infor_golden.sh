@@ -5,10 +5,11 @@ bash scripts/download_model_dataset.sh ${model} ${dataset}
 method="infor-golden"
 experiment_name="${model}_${dataset}_${method}"
 
-python3 main.py evaluation=infor_golden_in_context | tee $experiment_name.txt
+mkdir -p "log/${experiment_name}.txt"
+python3 main.py evaluation=infor_golden_in_context | tee "log/${experiment_name}.txt"
 
 if [ -f "scripts/s3upload.sh" ]; then
-    bash scripts/s3upload.sh ${experiment_name}
+    bash scripts/s3upload.sh "log/${experiment_name}"
 else
     echo "No s3upload.sh script found. Result will be saved locally."
 fi
