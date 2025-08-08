@@ -1,0 +1,141 @@
+[2025-08-03 12:11:22,799][__main__][INFO] - Configuration:
+model:
+  _target_: src.models.llama_model.LLaMAModel
+  config:
+    type: llama
+    model_path: /root/autodl-tmp/data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct
+    tokenizer_path: /root/autodl-tmp/data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct
+    torch_dtype: float16
+    device_map: cuda:0
+    terminators:
+    - <|eot_id|>
+    - <|end_of_text|>
+    chat_template: '{% for message in messages %}{{''<|start_header_id|>'' + message[''role'']
+      + ''<|end_header_id|>
+
+
+      '' + message[''content''] + ''<|eot_id|>'' }}{% endfor %}{% if add_generation_prompt
+      %}{{''<|start_header_id|>assistant<|end_header_id|>
+
+
+      ''}}{% endif %}'
+    generation_params:
+      max_new_tokens: 256
+      temperature: 0.3
+      top_p: 0.9
+      do_sample: true
+      eos_token_id: 128009
+      output_hidden_states: false
+      return_dict_in_generate: false
+    layer_num: 32
+dataset:
+  _target_: src.datasets.MMLUDataset
+  config:
+    name: mmlu
+    dataset_path: /root/autodl-tmp/data/datasets/cais/mmlu
+    subjects:
+    - high_school_biology
+    - high_school_chemistry
+    - high_school_physics
+    - college_mathematics
+    dev_split: dev
+    test_split: test
+    max_test_samples: 5000
+    random_seed: 42
+evaluation:
+  _target_: src.evaluators.in_context_evaluator.RandomInContextEvaluator
+  config:
+    name: random_in_context
+    system_prompt: You are an expert answering multiple choice questions. Analyze
+      the question carefully and select the ONE correct option. Output ONLY the capital
+      letter of your choice with NO additional text or explanation.
+    num_shots: 5
+    output_dir: ${hydra:runtime.output_dir}/results/
+    extract_hidden_states: false
+
+[2025-08-03 12:11:22,799][__main__][INFO] - Loading llama model...
+[2025-08-03 12:12:50,041][__main__][INFO] - Loading mmlu dataset with subject ['high_school_biology', 'high_school_chemistry', 'high_school_physics', 'college_mathematics']
+[2025-08-03 12:12:53,605][__main__][INFO] - Dev dataset size: 20
+[2025-08-03 12:12:53,606][__main__][INFO] - Test dataset size: 764
+[2025-08-03 12:12:53,606][__main__][INFO] - Loading random_in_context evaluator
+[2025-08-03 12:12:53,614][__main__][INFO] - 
+Starting evaluation...
+[2025-08-03 12:12:56,486][__main__][INFO] - Processed 10/764 | Accuracy: 0.2000
+[2025-08-03 12:12:58,678][__main__][INFO] - Processed 20/764 | Accuracy: 0.3500
+[2025-08-03 12:13:00,919][__main__][INFO] - Processed 30/764 | Accuracy: 0.4333
+[2025-08-03 12:13:03,152][__main__][INFO] - Processed 40/764 | Accuracy: 0.4500
+[2025-08-03 12:13:05,356][__main__][INFO] - Processed 50/764 | Accuracy: 0.4400
+[2025-08-03 12:13:07,607][__main__][INFO] - Processed 60/764 | Accuracy: 0.4500
+[2025-08-03 12:13:09,852][__main__][INFO] - Processed 70/764 | Accuracy: 0.4000
+[2025-08-03 12:13:12,143][__main__][INFO] - Processed 80/764 | Accuracy: 0.4125
+[2025-08-03 12:13:14,307][__main__][INFO] - Processed 90/764 | Accuracy: 0.4333
+[2025-08-03 12:13:16,423][__main__][INFO] - Processed 100/764 | Accuracy: 0.4400
+[2025-08-03 12:13:18,652][__main__][INFO] - Processed 110/764 | Accuracy: 0.4455
+[2025-08-03 12:13:21,070][__main__][INFO] - Processed 120/764 | Accuracy: 0.4250
+[2025-08-03 12:13:23,232][__main__][INFO] - Processed 130/764 | Accuracy: 0.4231
+[2025-08-03 12:13:25,567][__main__][INFO] - Processed 140/764 | Accuracy: 0.4071
+[2025-08-03 12:13:27,892][__main__][INFO] - Processed 150/764 | Accuracy: 0.4000
+[2025-08-03 12:13:30,200][__main__][INFO] - Processed 160/764 | Accuracy: 0.3875
+[2025-08-03 12:13:32,484][__main__][INFO] - Processed 170/764 | Accuracy: 0.3765
+[2025-08-03 12:13:34,709][__main__][INFO] - Processed 180/764 | Accuracy: 0.3611
+[2025-08-03 12:13:36,882][__main__][INFO] - Processed 190/764 | Accuracy: 0.3789
+[2025-08-03 12:13:39,076][__main__][INFO] - Processed 200/764 | Accuracy: 0.3750
+[2025-08-03 12:13:41,373][__main__][INFO] - Processed 210/764 | Accuracy: 0.3619
+[2025-08-03 12:13:43,681][__main__][INFO] - Processed 220/764 | Accuracy: 0.3682
+[2025-08-03 12:13:45,970][__main__][INFO] - Processed 230/764 | Accuracy: 0.3826
+[2025-08-03 12:13:48,067][__main__][INFO] - Processed 240/764 | Accuracy: 0.3875
+[2025-08-03 12:13:50,373][__main__][INFO] - Processed 250/764 | Accuracy: 0.3920
+[2025-08-03 12:13:52,592][__main__][INFO] - Processed 260/764 | Accuracy: 0.3923
+[2025-08-03 12:13:54,893][__main__][INFO] - Processed 270/764 | Accuracy: 0.3852
+[2025-08-03 12:13:57,021][__main__][INFO] - Processed 280/764 | Accuracy: 0.3714
+[2025-08-03 12:13:59,159][__main__][INFO] - Processed 290/764 | Accuracy: 0.3724
+[2025-08-03 12:14:01,375][__main__][INFO] - Processed 300/764 | Accuracy: 0.3800
+[2025-08-03 12:14:03,624][__main__][INFO] - Processed 310/764 | Accuracy: 0.3774
+[2025-08-03 12:14:05,860][__main__][INFO] - Processed 320/764 | Accuracy: 0.3719
+[2025-08-03 12:14:08,137][__main__][INFO] - Processed 330/764 | Accuracy: 0.3697
+[2025-08-03 12:14:10,349][__main__][INFO] - Processed 340/764 | Accuracy: 0.3618
+[2025-08-03 12:14:12,511][__main__][INFO] - Processed 350/764 | Accuracy: 0.3543
+[2025-08-03 12:14:14,701][__main__][INFO] - Processed 360/764 | Accuracy: 0.3556
+[2025-08-03 12:14:17,000][__main__][INFO] - Processed 370/764 | Accuracy: 0.3541
+[2025-08-03 12:14:19,300][__main__][INFO] - Processed 380/764 | Accuracy: 0.3500
+[2025-08-03 12:14:21,672][__main__][INFO] - Processed 390/764 | Accuracy: 0.3487
+[2025-08-03 12:14:23,875][__main__][INFO] - Processed 400/764 | Accuracy: 0.3450
+[2025-08-03 12:14:26,156][__main__][INFO] - Processed 410/764 | Accuracy: 0.3439
+[2025-08-03 12:14:28,281][__main__][INFO] - Processed 420/764 | Accuracy: 0.3452
+[2025-08-03 12:14:30,714][__main__][INFO] - Processed 430/764 | Accuracy: 0.3488
+[2025-08-03 12:14:32,875][__main__][INFO] - Processed 440/764 | Accuracy: 0.3477
+[2025-08-03 12:14:35,190][__main__][INFO] - Processed 450/764 | Accuracy: 0.3511
+[2025-08-03 12:14:37,530][__main__][INFO] - Processed 460/764 | Accuracy: 0.3522
+[2025-08-03 12:14:40,094][__main__][INFO] - Processed 470/764 | Accuracy: 0.3489
+[2025-08-03 12:14:42,333][__main__][INFO] - Processed 480/764 | Accuracy: 0.3458
+[2025-08-03 12:14:44,660][__main__][INFO] - Processed 490/764 | Accuracy: 0.3429
+[2025-08-03 12:14:46,853][__main__][INFO] - Processed 500/764 | Accuracy: 0.3420
+[2025-08-03 12:14:49,023][__main__][INFO] - Processed 510/764 | Accuracy: 0.3412
+[2025-08-03 12:14:51,450][__main__][INFO] - Processed 520/764 | Accuracy: 0.3404
+[2025-08-03 12:14:53,675][__main__][INFO] - Processed 530/764 | Accuracy: 0.3396
+[2025-08-03 12:14:56,007][__main__][INFO] - Processed 540/764 | Accuracy: 0.3370
+[2025-08-03 12:14:58,348][__main__][INFO] - Processed 550/764 | Accuracy: 0.3345
+[2025-08-03 12:15:00,577][__main__][INFO] - Processed 560/764 | Accuracy: 0.3286
+[2025-08-03 12:15:02,894][__main__][INFO] - Processed 570/764 | Accuracy: 0.3281
+[2025-08-03 12:15:05,276][__main__][INFO] - Processed 580/764 | Accuracy: 0.3259
+[2025-08-03 12:15:07,503][__main__][INFO] - Processed 590/764 | Accuracy: 0.3271
+[2025-08-03 12:15:09,740][__main__][INFO] - Processed 600/764 | Accuracy: 0.3283
+[2025-08-03 12:15:12,040][__main__][INFO] - Processed 610/764 | Accuracy: 0.3262
+[2025-08-03 12:15:14,240][__main__][INFO] - Processed 620/764 | Accuracy: 0.3242
+[2025-08-03 12:15:16,539][__main__][INFO] - Processed 630/764 | Accuracy: 0.3238
+[2025-08-03 12:15:18,895][__main__][INFO] - Processed 640/764 | Accuracy: 0.3250
+[2025-08-03 12:15:21,003][__main__][INFO] - Processed 650/764 | Accuracy: 0.3262
+[2025-08-03 12:15:23,398][__main__][INFO] - Processed 660/764 | Accuracy: 0.3258
+[2025-08-03 12:15:25,680][__main__][INFO] - Processed 670/764 | Accuracy: 0.3284
+[2025-08-03 12:15:27,905][__main__][INFO] - Processed 680/764 | Accuracy: 0.3338
+[2025-08-03 12:15:30,446][__main__][INFO] - Processed 690/764 | Accuracy: 0.3333
+[2025-08-03 12:15:32,819][__main__][INFO] - Processed 700/764 | Accuracy: 0.3314
+[2025-08-03 12:15:35,072][__main__][INFO] - Processed 710/764 | Accuracy: 0.3282
+[2025-08-03 12:15:37,271][__main__][INFO] - Processed 720/764 | Accuracy: 0.3264
+[2025-08-03 12:15:39,561][__main__][INFO] - Processed 730/764 | Accuracy: 0.3233
+[2025-08-03 12:15:41,884][__main__][INFO] - Processed 740/764 | Accuracy: 0.3230
+[2025-08-03 12:15:44,023][__main__][INFO] - Processed 750/764 | Accuracy: 0.3253
+[2025-08-03 12:15:46,151][__main__][INFO] - Processed 760/764 | Accuracy: 0.3276
+[2025-08-03 12:15:46,994][__main__][INFO] - Final Accuracy: 0.3272 (250/764)
+[2025-08-03 12:15:47,019][__main__][INFO] - 
+Evaluation completed. Accuracy: 0.3272
