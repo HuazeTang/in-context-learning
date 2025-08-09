@@ -105,7 +105,7 @@ class DeepSeekModel(LLaMAModel):
         # 尝试匹配 ... 标签
         # 匹配 <think>...</think> 标签
         if "<think>" in raw_output and "</think>" not in raw_output:
-            raise Warning(f"Invalid output format: {raw_output}")
+            print(f"[WARNING] 匹配到 <think> 标签，但缺少 </think> 标签")
         
         thinking_pattern = r'<think>(.*?)</think>'
         thinking_match = re.search(thinking_pattern, raw_output, re.DOTALL)
