@@ -9,7 +9,6 @@ subjects=(
     "abstract_algebra"
     "anatomy"
     "astronomy"
-    "auxiliary_train"
     "business_ethics"
     "clinical_knowledge"
     "college_biology"
@@ -83,7 +82,7 @@ for subject in "${subjects[@]}"; do
 
     if [ -n "$output_file_path" ] && [ "$output_file_path" != "None" ]; then
         # 生成新的文件名
-        new_filename="${experiment_name}_results.pkl"
+        new_filename="${subject}_results.pkl"
         
         # 重命名并移动到目标目录
         mv "$output_file_path" "log/all_results/$new_filename"
