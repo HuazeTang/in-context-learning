@@ -150,10 +150,11 @@ class InformationInContextExampleCompareEvaluator(InformationInContextGoldenExam
         assert hasattr(self.model, "layer_num"), f"Model must have attribute 'layer_num'"
         last_layer_name = f"layer_{self.model.layer_num}"
         extraction_layers = [last_layer_name]
+        pool_method = self.config.get("pool_method", None)
 
         for i, test_item in enumerate(tqdm(test_data, desc="Evaluating")):
             true_answer = self.dataset.format_answer(test_item)
-            single_case_result = self.evaluate_single_example(test_item, extraction_layers)
+            single_case_result = self.evaluate_single_example(test_item, extraction_layers, pool_method)
             single_case_all_result = single_case_result['all_results']
 
             best_argmax_hat_P = single_case_result['predictions']

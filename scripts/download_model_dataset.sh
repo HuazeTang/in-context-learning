@@ -18,9 +18,16 @@ else
     elif [ "$model_name" = "qwen3-8b" ]; then
         if [ ! -d "data/model_ckpts/Qwen/Qwen3-8B" ]; then
             mkdir -p data/model_ckpts/Qwen
-            git clone https://huggingface.co/Qwen/Qwen3-8B data/model_ckpts/Qwen/Qwen3-8B data/model_ckpts/Qwen/Qwen3-8B
+            git clone https://huggingface.co/Qwen/Qwen3-8B data/model_ckpts/Qwen/Qwen3-8B
         else
             echo "Qwen3-8B already exists"
+        fi
+    elif  [ "$model_name" = "deepseek-qwen3-8b" ]; then
+        if [ ! -d "data/model_ckpts/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B" ]; then
+            mkdir -p data/model_ckpts/Qwen
+            git clone https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B data/model_ckpts/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+        else
+            echo "DeepSeek-R1-Distill-Qwen-7B already exists"
         fi
     else
         echo "Unknown model name: $model_name"

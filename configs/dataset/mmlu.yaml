@@ -10,5 +10,5 @@ config:
     - "college_mathematics"
   dev_split: "dev"
   test_split: "test"
-  max_test_samples: 5000
+  max_test_samples: 5000000
   random_seed: 42

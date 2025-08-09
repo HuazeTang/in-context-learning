@@ -1,27 +1,29 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from .base_model import BaseModel
+from .llama_model import LLaMAModel
 import torch
 from torch import Tensor
 from typing import List, Dict, Optional
 import os
+import re
 
-class DeepSeekModel(BaseModel):
+class DeepSeekModel(LLaMAModel):
     def load_model(self):
-        print(f"[DEBUG] Using DeepSeekModel with model_path = {self.config.model_path}")
-        model_path = self.config.model_path
-        tokenizer_path = self.config.tokenizer_path
-        is_local = os.path.isdir(model_path)  # ✅ 判断是否是本地路径
+        model_path = os.path.abspath(self.config.model_path)
+        tokenizer_path = os.path.abspath(self.config.tokenizer_path)
+
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model path does not exist: {model_path}")
+        print(f"[DEBUG] Using DeepSeekModel with model_path = {model_path}")
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            tokenizer_path,
-            trust_remote_code=is_local
+            tokenizer_path, trust_remote_code=False
         )
-
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
             torch_dtype=getattr(torch, self.config.torch_dtype),
             device_map=self.config.device_map,
-            trust_remote_code=is_local
+            trust_remote_code=False
         )
 
         self.device = self.model.device
@@ -41,34 +43,6 @@ class DeepSeekModel(BaseModel):
 
         if terminator_ids:
             self.generation_params["eos_token_id"] = terminator_ids
-
-    def get_embeddings(self, text: str, layers_to_extract: Optional[int] = None) -> Dict[str, Tensor]:
-        """
-        获取文本的逐层 embedding 表示
-
-        Args:
-            text: 输入文本
-            layers_to_extract: 可选，指定要提取的层索引
-
-        Returns:
-            dict: 包含 embeddings、input_ids、attention_mask、sequence_length
-        """
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
-
-        with torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True)
-
-        embeddings = {}
-        for layer_idx, layer_output in enumerate(outputs.hidden_states):
-            if layers_to_extract is None or layer_idx in layers_to_extract:
-                embeddings[f"layer_{layer_idx}"] = layer_output.cpu().detach()
-
-        return {
-            "embeddings": embeddings,
-            "input_ids": inputs.input_ids.cpu(),
-            "attention_mask": inputs.attention_mask.cpu() if "attention_mask" in inputs else None,
-            "sequence_length": inputs.input_ids.shape[-1]
-        }
 
     def generate(self, messages, return_hidden_states=False, layers_to_extract=None):
         """
@@ -99,35 +73,54 @@ class DeepSeekModel(BaseModel):
             generation_params["attention_mask"] = attention_mask
         if return_hidden_states:
             generation_params["output_hidden_states"] = True
-            generation_params["return_dict_in_generate"] = True
+            generation_params["return_dict_in_generate"] = True    
 
         outputs = self.model.generate(input_ids, **generation_params)
+        assert return_hidden_states is False, "DeepSeek model does not support return_hidden_states"
+        
+        generated_ids = outputs[0][input_ids.shape[-1]:]
+        response = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+        
+        thinking_process, final_response = self._parse_thinking_output(response)
+        # print(f"[DEBUG] full response = {response}, final_response = {final_response}")
+        return {
+            "response": final_response,
+            "thinking_process": thinking_process,
+            "hidden_states": None,
+            "generated_ids": generated_ids,
+            "input_length": input_ids.shape[-1]
+        }
 
-        if return_hidden_states:
-            generated_ids = outputs.sequences[0][input_ids.shape[-1]:]
-            response = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+    def _parse_thinking_output(self, raw_output: str) -> tuple[str, str]:
+        """
+        解析 DeepSeek thinking model 的输出，分离思考过程和最终回答
+        
+        Args:
+            raw_output: 模型的原始输出
+            
+        Returns:
+            tuple: (thinking_process, final_response)
+        """
+        
+        # 尝试匹配 ... 标签
+        # 匹配 <think>...</think> 标签
+        if "<think>" in raw_output and "</think>" not in raw_output:
+            raise Warning(f"Invalid output format: {raw_output}")
+        
+        thinking_pattern = r'<think>(.*?)</think>'
+        thinking_match = re.search(thinking_pattern, raw_output, re.DOTALL)
 
-            all_hidden_states = []
-            for step_hidden_states in outputs.hidden_states:
-                step_layers = {}
-                for layer_idx, layer_output in enumerate(step_hidden_states):
-                    if layers_to_extract is None or layer_idx in layers_to_extract:
-                        step_layers[f"layer_{layer_idx}"] = layer_output.cpu().detach()
-                all_hidden_states.append(step_layers)
-
-            return {
-                "response": response,
-                "hidden_states": all_hidden_states,
-                "generated_ids": generated_ids,
-                "input_length": input_ids.shape[-1]
-            }
-
+        if thinking_match:
+            # 提取思考过程
+            thinking_process = thinking_match.group(1).strip()
+            
+            # 提取最终回答（移除thinking标签部分）
+            final_response = re.sub(thinking_pattern, '', raw_output, flags=re.DOTALL).strip()
+        
         else:
-            generated_ids = outputs[0][input_ids.shape[-1]:]
-            response = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-            return {
-                "response": response,
-                "hidden_states": None,
-                "generated_ids": generated_ids,
-                "input_length": input_ids.shape[-1]
-            }
+            # 如果没有找到thinking标签，将整个输出作为最终回答
+            
+            thinking_process = ""
+            final_response = raw_output.strip()
+        
+        return thinking_process, final_response
