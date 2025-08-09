@@ -10,3 +10,4 @@
 /scripts/s3upload.sh
 *.txt
 /scripts/download
+/logs
