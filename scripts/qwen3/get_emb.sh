@@ -1,5 +1,5 @@
 # 设置变量
-model="deepseek-qwen3-8b"
+model="qwen3-8b"
 dataset="mmlu"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 method="emb_gen"
@@ -70,7 +70,7 @@ mkdir -p log/all_results/
 
 for subject in "${subjects[@]}"; do
     experiment_name="${model}_${dataset}-${subject}_${method}_${pool_method}"
-    python3 main.py evaluation=emb_gen model=deepseek dataset.config.subjects="[$subject]" evaluation.config.pool_method="$pool_method" | tee "log/${experiment_name}.txt"
+    python3 main.py evaluation=emb_gen model=qwen dataset.config.subjects="[$subject]" evaluation.config.pool_method=${pool_method} | tee "log/${experiment_name}.txt"
 
     result=$(cat "log/${experiment_name}.txt")
     output_file_path=$(echo $result | grep "Results saved to file:" | awk '{print $NF}')

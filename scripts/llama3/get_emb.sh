@@ -1,5 +1,5 @@
 # 设置变量
-model="deepseek-qwen3-8b"
+model="llama3-8b"
 dataset="mmlu"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 method="emb_gen"
@@ -65,12 +65,13 @@ subjects=(
     "virology"
     "world_religions"
 )
+# subjects=("all")
 mkdir -p log
 mkdir -p log/all_results/
 
 for subject in "${subjects[@]}"; do
-    experiment_name="${model}_${dataset}-${subject}_${method}_${pool_method}"
-    python3 main.py evaluation=emb_gen model=deepseek dataset.config.subjects="[$subject]" evaluation.config.pool_method="$pool_method" | tee "log/${experiment_name}.txt"
+    experiment_name="${model}_${dataset}-${subject}_${method}_{$pool_method}"
+    python3 main.py evaluation=emb_gen model=llama dataset.config.subjects="[$subject]" evaluation.config.pool_method=${pool_method} | tee "log/${experiment_name}.txt"
 
     result=$(cat "log/${experiment_name}.txt")
     output_file_path=$(echo $result | grep "Results saved to file:" | awk '{print $NF}')
@@ -83,7 +84,7 @@ for subject in "${subjects[@]}"; do
 
     if [ -n "$output_file_path" ] && [ "$output_file_path" != "None" ]; then
         # 生成新的文件名
-        new_filename="${experiment_name}_results.pkl"
+        new_filename="${subject}_results.pkl"
         
         # 重命名并移动到目标目录
         mv "$output_file_path" "log/all_results/$new_filename"
