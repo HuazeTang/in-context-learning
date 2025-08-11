@@ -15,6 +15,7 @@ class EmbeddingGenerationEvaluator(RandomInforInContextEvaluator):
         return {
             'question': question, 
             'answer': answer, 
+            'choices': test_item['choices'],
             'embedding': xq_embeddings
         }
     
