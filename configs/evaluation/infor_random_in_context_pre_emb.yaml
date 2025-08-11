@@ -1,4 +1,4 @@
-_target_: src.evaluators.information_in_context_random_pre_emb.RandomInforInContextEvaluatorPreEmb
+_target_: src.evaluators.RandomInforInContextEvaluatorPreEmb
 config:
   name: "infor_random_pre_emb_in_context"
   system_prompt: "You are an expert answering multiple choice questions. Analyze the question carefully and select the ONE correct option. Output ONLY the capital letter of your choice with NO additional text or explanation."
