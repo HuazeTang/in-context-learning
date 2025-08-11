@@ -67,9 +67,11 @@ subjects=(
 mkdir -p log
 mkdir -p log/all_results/
 
+torch_dtype=float32
+
 for subject in "${subjects[@]}"; do
     experiment_name="${model}_${dataset}-${subject}_${method}_${pool_method}"
-    python3 main.py evaluation=emb_gen model=deepseek dataset.config.subjects="[$subject]" evaluation.config.pool_method="$pool_method" | tee "log/${experiment_name}.txt"
+    python3 main.py evaluation=emb_gen model=deepseek model.config.torch_dtype=$torch_dtype dataset.config.subjects="[$subject]" evaluation.config.pool_method="$pool_method" | tee "log/${experiment_name}.txt"
 
     result=$(cat "log/${experiment_name}.txt")
     output_file_path=$(echo $result | grep "Results saved to file:" | awk '{print $NF}')
@@ -98,6 +100,6 @@ tar -czf log/all_results.tar.gz -C log all_results/
 
 s3_trained_model_folder=s3://uav-autotest-simulation-training/in_context_llm_prompting
 date=$(date +%Y-%m-%d-%H-%M-%S)
-s3_output_file_path=${s3_trained_model_folder}/${model}/${dataset}-${pool_method}
+s3_output_file_path=${s3_trained_model_folder}/${model}/${dataset}-${pool_method}-${torch_dtype}
 
 s3cmd -c job/s3cfg put log/all_results.tar.gz ${s3_output_file_path}
