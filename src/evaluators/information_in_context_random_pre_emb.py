@@ -7,12 +7,12 @@ import torch
 
 class RandomInforInContextEvaluatorPreEmb(RandomInforInContextEvaluator):
     def sample_embedings(self, test_item, extraction_layers, pool_method):
-        """获得 \xi(x_Q)"""
+        r"""获得 \xi(x_Q)"""
         xq_embeddings_all = test_item['embedding']
         return [{layer_name: xq_embeddings_all[layer_name] for layer_name in extraction_layers}]
 
     def get_all_xi_all_y_embeddings(self, few_shot_examples, extraction_layers):
-        """获得 few shot example 的 \xi(x,y)"""
+        r"""获得 few shot example 的 \xi(x,y)"""
         all_xi_all_y_embeddings = {}
         for layer_name in extraction_layers:
             random_picked_dev_tensor = torch.stack(
@@ -23,7 +23,7 @@ class RandomInforInContextEvaluatorPreEmb(RandomInforInContextEvaluator):
         return all_xi_all_y_embeddings
     
     def get_all_xi_yi_embeddings(self, few_shot_examples, extraction_layers):
-        """获得 few shot example 的 \xi(x,y)"""
+        r"""获得 few shot example 的 \xi(x,y)"""
         all_xi_yi_embeddings = {}
         for layer_name in extraction_layers:
             random_picked_dev_tensor_list = []
@@ -37,7 +37,7 @@ class RandomInforInContextEvaluatorPreEmb(RandomInforInContextEvaluator):
         return all_xi_yi_embeddings
     
     def sample_few_shot_examples(self, extraction_layers, pool_method):
-        """获得 few shot example 的 \xi(x,y)"""
+        r"""获得 few shot example 的 \xi(x,y)"""
         # 随机采样
         num_shots = self.config.get('num_shots', 5)
         few_shot_examples = self.dataset.get_few_shot_examples(num_shots)
