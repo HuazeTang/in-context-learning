@@ -1,4 +1,5 @@
 import time
+import math
 import torch
 from torch import Tensor
 from tqdm import tqdm
@@ -41,7 +42,17 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
 
         #         [[ 1.0000e+00, -1.7881e-07],
         #         [-5.9605e-08,  1.0000e+00]]])
-        Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True) # shape: (batch_size, K, K)
+        if num_x * num_y < K:
+            # (XX^T)^\dagger = X (X^T X)^\dagger (X^T X)^\dagger X^T
+            x = reshaped_emb.T / math.sqrt(num_x)
+            XT_X_inv = torch.linalg.pinv(
+                torch.bmm(x.transpose(-2, -1), x),
+                hermitian=True
+            ) # since x.T @ x is small, this will be super fast
+            XT_X_inv_square = torch.bmm(XT_X_inv, XT_X_inv)
+            Xi_pinv = torch.bmm(x, torch.bmm(XT_X_inv_square, x.transpose(-2, -1)))
+        else:
+            Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True) # shape: (batch_size, K, K)
         
         return Xi_matrix, Xi_pinv
     
@@ -58,7 +69,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         Xq_Xi_dagger_matrix = Xq_matrix @ Xi_pinv # shape: (batch_size, K, K)
 
         # 求解 Xq_Xi_dagger_matrix 的最大特征值
-        lambda_1 = torch.linalg.eigvalsh(Xq_Xi_dagger_matrix).max(dim=-1).values # shape: (batch_size,)
+        lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix).max(dim=-1).values # shape: (batch_size,)
 
         return lambda_1
     

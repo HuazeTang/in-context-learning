@@ -4,7 +4,7 @@ from torch import Tensor
 from tqdm import tqdm
 from typing import List, Dict, Any, Tuple
 from collections import defaultdict
-from .informatoin_in_context_golden_example_evaluator import InformationInContextGoldenExampleEvaluator
+from .information_in_context_golden_example_evaluator import InformationInContextGoldenExampleEvaluator
 
 
 class InformationInContextExampleCompareEvaluator(InformationInContextGoldenExampleEvaluator):
