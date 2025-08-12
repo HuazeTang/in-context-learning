@@ -1,4 +1,4 @@
-_target_: src.evaluators.informatoin_in_context_example_compare_evaluator.InformationInContextExampleCompareEvaluator
+_target_: src.evaluators.InformationInContextExampleCompareEvaluator
 config:
   name: "infor_golden_compare_in_context"
   system_prompt: "You are an expert answering multiple choice questions. Analyze the question carefully and select the ONE correct option. Output ONLY the capital letter of your choice with NO additional text or explanation."
