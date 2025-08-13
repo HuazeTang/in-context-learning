@@ -1,5 +1,5 @@
 model="llama3-8b"
-dataset="mmlu"
+dataset="mmlu-per-emb-llama3-8b"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 
 method="infor-golden-prompt"
