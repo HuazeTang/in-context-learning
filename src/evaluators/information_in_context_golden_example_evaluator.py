@@ -120,8 +120,8 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
             lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix.float()) # shape: (batch_size,)
         else:
             # \lambda_1(x_q x_q^T \Xi^\dagger) = \lambda_1(x_q^T \Xi^\dagger x_q)
-            Xq_Xi_inv = xq_embeddings.float()[None, ...] @ Xi_pinv @ xq_embeddings.float().T[None, ...]
-            lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[-1].real
+            Xq_Xi_inv = xq_embeddings.float()[None, ...] @ Xi_pinv @ xq_embeddings.float().T[None, ...] # shape: (batch_size, K, K)
+            lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[:, -1].real
 
         return lambda_1
     
