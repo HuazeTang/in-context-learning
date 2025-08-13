@@ -15,15 +15,15 @@ class BaseModel(ABC):
 
         self.load_model()
         
-    @abstractmethod
+    # @abstractmethod
     def load_model(self):
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def get_embeddings(self, text):
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def generate(self, messages):
         pass
     

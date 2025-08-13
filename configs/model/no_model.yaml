@@ -1,0 +1,4 @@
+_target_: src.models.base_model.BaseModel
+config:
+  type: no_model
+  layer_num: 0
