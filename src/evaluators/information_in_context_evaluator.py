@@ -326,7 +326,8 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         pool_method = self.config.get('pool_method', None)
         print("pool method: ", pool_method)
 
-        for i, test_item in enumerate(tqdm(test_data, desc="Evaluating")):
+        pbar = tqdm(test_data, desc="Evaluating")
+        for i, test_item in enumerate(pbar):
             single_case_result = self.evaluate_single_example(test_item, extraction_layers, pool_method)
             argmax_hat_P = single_case_result['predictions']
             few_shot_examples = single_case_result['few_shot_examples']
@@ -356,6 +357,15 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             is_correct = self.evaluate_prediction(pred_answer, true_answer)
             if is_correct:
                 correct += 1
+            
+            current_acc = correct / (i+1)
+            possible_highest_acc = (correct + len(test_data) - i) / len(test_data)
+            possible_lowest_acc = correct / len(test_data)
+            pbar.set_postfix({
+                'Acc': f'{current_acc:.4f}',
+                'High': f'{possible_highest_acc:.4f}',
+                'Low': f'{possible_lowest_acc:.4f}'
+            })
             
             # 记录结果
             result_record = self.create_result_record(
