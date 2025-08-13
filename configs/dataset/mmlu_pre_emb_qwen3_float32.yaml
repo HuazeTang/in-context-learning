@@ -1,0 +1,14 @@
+_target_: src.datasets.MMLUPreEmbDataset
+config:
+  name: "mmlu"
+  dataset_path: "./data/datasets/qwen3-mmlu/all_results_float32"
+  subjects: 
+    - "all"
+    # - "high_school_biology"
+    # - "high_school_chemistry"  
+    # - "high_school_physics"
+    # - "college_mathematics"
+  dev_split: "dev"
+  test_split: "test"
+  max_test_samples: 5000000
+  random_seed: 42
