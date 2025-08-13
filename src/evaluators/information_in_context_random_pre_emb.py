@@ -6,10 +6,10 @@ import torch
 
 
 class RandomInforInContextEvaluatorPreEmb(RandomInforInContextEvaluator):
-    def sample_embedings(self, test_item, extraction_layers, pool_method):
+    def sample_embeddings(self, examples, extraction_layers, pool_method):
         r"""获得 \xi(x_Q)"""
-        xq_embeddings_all = test_item['embedding']
-        return [{layer_name: xq_embeddings_all[layer_name] for layer_name in extraction_layers}]
+        xq_embeddings_all = examples['embedding']
+        return [{layer_name: xq_embeddings_all[layer_name] for layer_name in extraction_layers}], None
 
     def get_all_xi_all_y_embeddings(self, few_shot_examples, extraction_layers):
         r"""获得 few shot example 的 \xi(x,y)"""

@@ -9,6 +9,54 @@ from .information_in_context_evaluator import (
 )
 
 
+def power_iteration(matrix_input: torch.Tensor, max_iter=1000, tol=1e-6):
+    """Get the largest eigenvalue and corresponding eigenvector for batch matrices"""
+    if len(matrix_input.shape) == 2:
+        # 单个矩阵的情况，添加batch维度
+        matrix_input = matrix_input.unsqueeze(0)
+        squeeze_output = True
+    else:
+        squeeze_output = False
+    
+    batch_size, _, m = matrix_input.shape
+    
+    # 初始化随机向量 (batch_size, m)
+    v = torch.randn((batch_size, m), device=matrix_input.device)
+    v = v / torch.linalg.norm(v, dim=1, keepdim=True)  # 批量归一化
+    
+    # 收敛标志，用于跟踪每个batch是否收敛
+    converged = torch.zeros(batch_size, dtype=torch.bool, device=matrix_input.device)
+    
+    for i in range(max_iter):
+        v_old = v.clone()
+        
+        # 批量矩阵向量乘法: (batch_size, n, m) @ (batch_size, m, 1) -> (batch_size, n, 1)
+        v = torch.bmm(matrix_input, v.unsqueeze(-1)).squeeze(-1)
+        
+        # 批量归一化
+        v_norm = torch.linalg.norm(v, dim=1, keepdim=True)
+        v = v / (v_norm + 1e-12)  # 添加小的epsilon避免除零
+        
+        # 检查收敛性 - 只检查尚未收敛的样本
+        not_converged_mask = ~converged
+        if not_converged_mask.any():
+            diff_norm = torch.linalg.norm(v - v_old, dim=1)
+            newly_converged = (diff_norm < tol) & not_converged_mask
+            converged = converged | newly_converged
+        
+        # 如果所有样本都收敛了，提前退出
+        if converged.all():
+            break
+    
+    # 计算特征值: lambda = v^T * M * v
+    Mv = torch.bmm(matrix_input, v.unsqueeze(-1)).squeeze(-1)  # (batch_size, m)
+    lambda_1 = torch.sum(v * Mv, dim=1)  # (batch_size,)
+    
+    if squeeze_output:
+        return lambda_1.squeeze(0), v.squeeze(0)
+    
+    return lambda_1, v
+
 class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
     def parallel_solve_Xi_matrix(self, all_xi_all_y_embeddings: Tensor) -> Tuple[Tensor, Tensor]:
         """并行化计算Xi矩阵"""
@@ -44,13 +92,11 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         #         [-5.9605e-08,  1.0000e+00]]])
         if num_x * num_y < K:
             # (XX^T)^\dagger = X (X^T X)^\dagger (X^T X)^\dagger X^T
-            x = reshaped_emb.T / math.sqrt(num_x)
-            XT_X_inv = torch.linalg.pinv(
-                torch.bmm(x.transpose(-2, -1), x),
-                hermitian=True
-            ) # since x.T @ x is small, this will be super fast
-            XT_X_inv_square = torch.bmm(XT_X_inv, XT_X_inv)
-            Xi_pinv = torch.bmm(x, torch.bmm(XT_X_inv_square, x.transpose(-2, -1)))
+            x = reshaped_emb / math.sqrt(num_x) # shape: (batch, num_x * num_y, K)
+            xTx = torch.bmm(x, x.transpose(-2, -1)) # shape: (batch_size, num_x * num_y, num_x * num_y)
+            XT_X_inv = torch.linalg.pinv(xTx, hermitian=True) # since x.T @ x is small, this will be super fast
+            tmp = torch.bmm(XT_X_inv, x) # shape: (batch_size, K, num_x * num_y)
+            Xi_pinv = torch.bmm(tmp, tmp.transpose(-2, -1)) # shape: (batch_size, K, K)
         else:
             Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True) # shape: (batch_size, K, K)
         
@@ -65,11 +111,17 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
 
         assert Xi_pinv.shape[1:] == (K, K), f"Invalid shape for Xi_pinv: {Xi_pinv.shape}, should be (f{K}, f{K})"
 
-        Xq_matrix = xq_embeddings.float().T @ xq_embeddings.float() # shape: (K, K)
-        Xq_Xi_dagger_matrix = Xq_matrix @ Xi_pinv # shape: (batch_size, K, K)
+        if num_y > K:
+            Xq_matrix = xq_embeddings.float().T @ xq_embeddings.float() # shape: (K, K)
+            Xq_Xi_dagger_matrix = Xq_matrix[None, ...] @ Xi_pinv # shape: (batch_size, K, K)
 
-        # 求解 Xq_Xi_dagger_matrix 的最大特征值
-        lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix).max(dim=-1).values # shape: (batch_size,)
+            # 求解 Xq_Xi_dagger_matrix 的最大特征值
+            # lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix).max(dim=-1).values # shape: (batch_size,)
+            lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix.float()) # shape: (batch_size,)
+        else:
+            # \lambda_1(x_q x_q^T \Xi^\dagger) = \lambda_1(x_q^T \Xi^\dagger x_q)
+            Xq_Xi_inv = xq_embeddings.float()[None, ...] @ Xi_pinv @ xq_embeddings.float().T[None, ...]
+            lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[-1].real
 
         return lambda_1
     
@@ -78,6 +130,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         best_results = {}
 
         # 一次性采样所有的 samples
+        # now_time = time.time()
         all_few_samples = []
         # t = time.time()
         for _ in range(golden_examples_sample_times):
@@ -91,7 +144,8 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
                 "all_xi_yi_embeddings": all_xi_yi_embeddings,
                 "few_shot_examples": few_shot_examples
             })
-        # tt = time.time()
+        # print(f"采样耗时: {time.time() - now_time}")
+        # now_time = time.time()
 
         # 并行化评估sample质量
         last_layer_name = f"layer_{self.model.layer_num}"
@@ -112,16 +166,19 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
             batch_all_xi_all_y_embeddings
         )
 
+        # print(f"并行化计算 Xi 矩阵及其逆矩阵 耗时: {time.time() - now_time}")
+        # now_time = time.time()
+
         ## 并行化计算 lambda_1
         batch_lambda_1= self.parallel_solve_lambda_1_Xq_Xi_dagger(
             batch_Xi_pinv, xq_embeddings[last_layer_name].to(self.model.device)
         )
 
+        # print(f"并行化计算 lambda_1 耗时: {time.time() - now_time}, {batch_lambda_1.shape}")
+        # now_time = time.time()
+
         ## 找到最优的 lambda_1
         optimal_index = int(torch.argmin(batch_lambda_1).cpu().item())
-
-        # ttt = time.time()
-        # print(f"评估所有样本耗时: {ttt - tt}")
 
         # 取得最优结果
         best_results = {
@@ -132,6 +189,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
             "Xi_matrix": batch_Xi_matrix[optimal_index],
             "Xi_pinv": batch_Xi_pinv[optimal_index]
         }
+        # exit()
         
         return best_results
 
@@ -151,10 +209,13 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         all_xi_yi_embeddings = best_results["all_xi_yi_embeddings"][last_layer_name].to(self.model.device)
         few_shot_examples = best_results["few_shot_examples"]
         lambda_1 = {last_layer_name: best_results["lambda_1"]}
-        Xi_matrix = best_results["Xi_matrix"].to(self.model.device)
+        # Xi_matrix = best_results["Xi_matrix"].to(self.model.device)
         # will not calculate rank for now
         # rank = {last_layer_name: torch.linalg.matrix_rank(Xi_matrix)}
-        rank = {last_layer_name: torch.tensor(-1)}
+        all_xi_all_y_layer_emb_reshaped = all_xi_yi_embeddings.reshape(-1, all_xi_yi_embeddings.shape[-1])
+        rank = {
+            last_layer_name: torch.linalg.matrix_rank(all_xi_all_y_layer_emb_reshaped @ all_xi_all_y_layer_emb_reshaped.T)
+        }
 
         # 计算每个层的 \bar{\xi}(x_i, y_i)
         mean_xi_yi_embeddings = torch.mean(all_xi_yi_embeddings, dim=0)

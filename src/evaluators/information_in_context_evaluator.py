@@ -176,10 +176,11 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         assert torch.allclose(Xi_matrix, Xi_matrix.T), "Xi_matrix is not hermitian matrix"
         if num_x * num_y < K:
             # (XX^T)^\dagger = X (X^T X)^\dagger (X^T X)^\dagger X^T (?)
-            x = reshaped_emb.T / math.sqrt(float(num_x))
-            XT_X_inv = torch.linalg.pinv(x.T @ x, hermitian=True) # since x.T @ x is small, this will be super fast
-            tmp = x @ XT_X_inv
-            Xi_pinv = tmp @ tmp.T
+            x = reshaped_emb / math.sqrt(float(num_x)) # shape: (num_x * num_y, K)
+            xTx = x @ x.T # shape: (num_x * num_y, num_x * num_y)
+            XT_X_inv = torch.linalg.pinv(xTx, hermitian=True) # since x.T @ x is small, this will be super fast
+            tmp = XT_X_inv @ x # shape: (num_x * num_y, K)
+            Xi_pinv = tmp.T @ tmp # shape: (K, K)
             # U, S, _ = torch.linalg.svd(reshaped_emb.T, full_matrices=False)
             # S = (S ** 2)
             # tol = torch.finfo(S.dtype).eps * max(len(S), 1) * torch.max(S)
