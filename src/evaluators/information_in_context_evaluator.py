@@ -6,7 +6,27 @@ from typing import List, Dict, Any, Tuple, Union
 from .base_evaluator import BaseEvaluator, RESPONSE_MODEL, HIDDEN_STATES_MODEL
 from enum import Enum
 from collections import defaultdict
+import math
 
+
+def power_iteration(matrix_input: torch.Tensor, max_iter=1000, tol=1e-6):
+    """Get the largest eigenvalue and corresponding eigenvector"""
+    _, m = matrix_input.shape
+    v = torch.randn((m,)).to(matrix_input.device)
+    v /= torch.linalg.norm(v)  # 初始归一化
+    
+    for i in range(max_iter):
+        v_old = v.clone()
+        v = matrix_input @ v
+        v /= torch.linalg.norm(v)
+        
+        # 检查收敛性
+        if torch.linalg.norm(v - v_old) < tol:
+            break
+    
+    Mv = matrix_input @ v
+    lambda_1 = torch.dot(v, Mv)
+    return lambda_1, v
 
 class RandomInforInContextEvaluator(BaseEvaluator):
     def build_prompt_with_answer(self, question: str, answer: str):
@@ -154,7 +174,22 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         Xi_matrix = reshaped_emb.T @ reshaped_emb / num_x
         # check whether Xi_matrix is hermitian matrix
         assert torch.allclose(Xi_matrix, Xi_matrix.T), "Xi_matrix is not hermitian matrix"
-        Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True)
+        if num_x * num_y < K:
+            # (XX^T)^\dagger = X (X^T X)^\dagger (X^T X)^\dagger X^T (?)
+            x = reshaped_emb.T / math.sqrt(float(num_x))
+            XT_X_inv = torch.linalg.pinv(x.T @ x, hermitian=True) # since x.T @ x is small, this will be super fast
+            tmp = x @ XT_X_inv
+            Xi_pinv = tmp @ tmp.T
+            # U, S, _ = torch.linalg.svd(reshaped_emb.T, full_matrices=False)
+            # S = (S ** 2)
+            # tol = torch.finfo(S.dtype).eps * max(len(S), 1) * torch.max(S)
+            # # inv_scaled_sq = torch.zeros_like(scaled_sq)
+            # mask = S > tol
+            # S[mask] = float(num_x) / S[mask]
+            # S_inv = torch.diag(S)
+            # Xi_pinv = U @ S_inv @ U.T
+        else:
+            Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True)
         
         return Xi_matrix, Xi_pinv
     
@@ -178,12 +213,21 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         assert len(xq_embeddings.shape) == 2, f"Invalid shape for xq_embeddings: {xq_embeddings.shape}"
         num_y, K = xq_embeddings.shape
         assert Xi_pinv.shape == (K, K), f"Invalid shape for Xi_pinv: {Xi_pinv.shape}, should be (f{K}, f{K})"
-        
-        Xq_matrix = xq_embeddings.float().T @ xq_embeddings.float()
-        Xq_Xi_dagger_matrix = Xq_matrix @ Xi_pinv
-        
-        # 求解 Xq_Xi_dagger_matrix 的最大特征值
-        lambda_1 = torch.linalg.eigvalsh(Xq_Xi_dagger_matrix.float()).max()
+
+        if num_y > K:
+            # directly calculate \lambda_1
+            Xq_Xi_dagger_matrix = xq_embeddings.float().T @ (xq_embeddings.float() @ Xi_pinv) # shape: (K, K)
+            # lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix.float())[0].real
+            lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix.float())
+        else:
+            # \lambda_1(x_q x_q^T \Xi^\dagger) = \lambda_1(x_q^T \Xi^\dagger x_q)
+            Xq_Xi_inv = xq_embeddings.float() @ Xi_pinv @ xq_embeddings.float().T
+            lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[-1].real
+
+            # U, S, _ = torch.linalg.svd(xq_embeddings.T, full_matrices=False)
+            # X_tmp = U.T @  Xi_pinv @ U
+            # lambda_1 = torch.linalg.eigvals(torch.diag(S**2) @ X_tmp)[0].real
+
         return lambda_1
     
     def solve_metrics(self, all_xi_all_y_layer_emb: Tensor, mean_xi_yi_layer_emb: Tensor, xq_embeddings: Tensor) -> Dict[str, Tensor]:
@@ -191,15 +235,16 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         mean_xi_yi_layer_emb = mean_xi_yi_layer_emb.to(self.model.device)
         xq_embeddings = xq_embeddings.to(self.model.device)
         
-        Xi_matrix, Xi_pinv = self.solve_Xi_matrix(all_xi_all_y_layer_emb)
+        _, Xi_pinv = self.solve_Xi_matrix(all_xi_all_y_layer_emb)
 
-        # jump over rank calculation
-        # rank = torch.linalg.matrix_rank(Xi_matrix, tol=1e-2)
-        rank = torch.tensor(-1)
-
+        # since Xi_matrix = all_xi_all_y_layer_emb.T @ all_xi_all_y_layer_emb / num_x,
+        # we have that rank(Xi_matrix) = rank(all_xi_all_y_layer_emb @ all_xi_all_y_layer_emb.T)
+        # since all_xi_all_y_layer_emb @ all_xi_all_y_layer_emb.T is small, this will be super fast
+        all_xi_all_y_layer_emb_reshaped = all_xi_all_y_layer_emb.reshape(-1, all_xi_all_y_layer_emb.shape[-1])
+        rank = torch.linalg.matrix_rank(all_xi_all_y_layer_emb_reshaped @ all_xi_all_y_layer_emb_reshaped.T)
         alpha = self.solve_alpha(Xi_pinv, mean_xi_yi_layer_emb)
         lambda_1 = self.solve_lambda_1_Xq_Xi_dagger(Xi_pinv, xq_embeddings)
-
+        
         return {
             "alpha": alpha,
             "lambda_1": lambda_1,
@@ -300,11 +345,11 @@ class RandomInforInContextEvaluator(BaseEvaluator):
                 if is_correct_k:
                     correct_all[k] += 1
             
-            current_correct_string = ""
-            for k,v in correct_all.items():
-                acc = v / (i+1)
-                current_correct_string += f"{k}: {acc:.2f}; "
-            self.logger.info(f"{i+1}/{total}: {current_correct_string}")
+            # current_correct_string = ""
+            # for k,v in correct_all.items():
+            #     acc = v / (i+1)
+            #     current_correct_string += f"{k}: {acc:.2f}; "
+            # self.logger.info(f"{i+1}/{total}: {current_correct_string}")
 
             # 评估结果
             is_correct = self.evaluate_prediction(pred_answer, true_answer)
@@ -326,7 +371,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             results.append(result_record)
             
             # 定期记录进度
-            self.log_progress(i + 1, total, correct)
+            # self.log_progress(i + 1, total, correct)
         
         accuracy = correct / total
         self.log_final_results(accuracy, correct, total)
