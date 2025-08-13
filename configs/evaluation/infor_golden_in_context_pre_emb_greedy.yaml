@@ -1,0 +1,9 @@
+_target_: src.evaluators.InformationInContextPreEmbGreedyGoldenExampleEvaluator
+config:
+  name: "infor_golden_in_context_pre_emb_greedy"
+  system_prompt: "You are an expert answering multiple choice questions. Analyze the question carefully and select the ONE correct option. Output ONLY the capital letter of your choice with NO additional text or explanation."
+  num_shots: 5
+  output_dir: "${hydra:runtime.output_dir}/results/"
+  extract_hidden_states: false 
+  golden_examples_sample_times: 10
+  pool_method: "last"
