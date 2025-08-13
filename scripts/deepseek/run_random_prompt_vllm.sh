@@ -1,14 +1,17 @@
-#model="qwen3-8b"
-model="qwen3-14b"
+# 设置变量
+#model="deepseek-qwen3-8b"
+model="deepseek-qwen3-14b"
 dataset="mmlu"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 
-method="infor-golden-compare"
+method="random_prompt"
 experiment_name="${model}_${dataset}_${method}"
 
+# 启动推理任务
 mkdir -p log
-python3 main.py evaluation=infor_golden_compare_in_context dataset.config.max_test_samples=100 model=qwen dataset="${dataset}" | tee "log/${experiment_name}.txt"
+python3 main.py evaluation=random_in_context model=deepseek_vllm dataset="${dataset}" | tee "log/${experiment_name}.txt"
 
+# 可选上传结果
 if [ -f "scripts/s3upload.sh" ]; then
     bash scripts/s3upload.sh "log/${experiment_name}"
 else

@@ -1,0 +1,26 @@
+_target_: src.models.deepseek_vllm_model.DeepSeekVLLMModel
+config:
+  type: deepseek
+#  model_path: "/root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+#  tokenizer_path: "/root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+  model_path: "/root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+  tokenizer_path: "/root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+  torch_dtype: float16
+  device_map: "cuda:0"
+
+  terminators:
+    - "</s>"
+    - "<|endoftext|>"
+
+  chat_template: "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n' + message['content'] + '<|eot_id|>' }}{% endfor %}{% if add_generation_prompt %}{{'<|start_header_id|>assistant<|end_header_id|>\n\n'}}{% endif %}"
+
+  generation_params:
+    max_new_tokens: 2048
+    temperature: 0.3
+    top_p: 0.9
+    do_sample: true
+    eos_token_id: 151645  # DeepSeek 模型使用与 Qwen 相同的 tokenizer 构建规则
+    output_hidden_states: false
+    return_dict_in_generate: false
+
+  layer_num: 32
