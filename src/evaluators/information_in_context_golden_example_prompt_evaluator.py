@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 from tqdm import tqdm
 from typing import List, Dict, Any, Tuple
-from .informatoin_in_context_golden_example_evaluator import InformationInContextGoldenExampleEvaluator, RESPONSE_MODEL, HIDDEN_STATES_MODEL
+from .information_in_context_golden_example_evaluator import InformationInContextGoldenExampleEvaluator, RESPONSE_MODEL, HIDDEN_STATES_MODEL
 from enum import Enum
 
 
