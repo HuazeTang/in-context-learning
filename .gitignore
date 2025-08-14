@@ -12,3 +12,6 @@
 /scripts/download
 /logs
 /log
+*.ipynb
+*.json
+"valid torch jax.py"
