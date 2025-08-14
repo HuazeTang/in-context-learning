@@ -1,0 +1,56 @@
+[2025-08-07 22:51:22,951][__main__][INFO] - Configuration:
+model:
+  _target_: src.models.deepseek_model.DeepSeekModel
+  config:
+    type: deepseek
+    model_path: ./data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+    tokenizer_path: ./data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+    torch_dtype: float16
+    device_map: cuda:0
+    terminators:
+    - </s>
+    - <|endoftext|>
+    chat_template: '{% for message in messages %}{{''<|start_header_id|>'' + message[''role'']
+      + ''<|end_header_id|>
+
+
+      '' + message[''content''] + ''<|eot_id|>'' }}{% endfor %}{% if add_generation_prompt
+      %}{{''<|start_header_id|>assistant<|end_header_id|>
+
+
+      ''}}{% endif %}'
+    generation_params:
+      max_new_tokens: 256
+      temperature: 0.3
+      top_p: 0.9
+      do_sample: true
+      eos_token_id: 151645
+      output_hidden_states: false
+      return_dict_in_generate: false
+    layer_num: 32
+dataset:
+  _target_: src.datasets.MMLUDataset
+  config:
+    name: mmlu
+    dataset_path: /root/autodl-tmp/data/datasets/cais/mmlu
+    subjects:
+    - high_school_biology
+    - high_school_chemistry
+    - high_school_physics
+    - college_mathematics
+    dev_split: dev
+    test_split: test
+    max_test_samples: 5000
+    random_seed: 42
+evaluation:
+  _target_: src.evaluators.in_context_evaluator.RandomInContextEvaluator
+  config:
+    name: random_in_context
+    system_prompt: You are an expert answering multiple choice questions. Analyze
+      the question carefully and select the ONE correct option. Output ONLY the capital
+      letter of your choice with NO additional text or explanation.
+    num_shots: 5
+    output_dir: ${hydra:runtime.output_dir}/results/
+    extract_hidden_states: false
+
+[2025-08-07 22:51:22,951][__main__][INFO] - Loading deepseek model...
