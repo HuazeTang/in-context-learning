@@ -5,6 +5,7 @@ import re
 import os
 import random
 import pickle
+import glob
 
 
 class MMLUPreEmbDataset(MMLUDataset):
@@ -14,9 +15,32 @@ class MMLUPreEmbDataset(MMLUDataset):
         return data
     
     def load_subject_pickle(self, dataset_path, subject):
-        file_path = f"./{dataset_path}/{subject}_results.pkl"
-        if not os.path.exists(file_path):
-           raise FileNotFoundError(f"File not found: {file_path}")
+        if subject == "all":
+            # load all subject data from local pkl file ends with "_results.pkl"
+            file_pattern = f"./{dataset_path}/*.pkl"
+            pkl_files = glob.glob(file_pattern)
+
+            if not pkl_files:
+                raise FileNotFoundError(f"No pkl files found matching pattern: {file_pattern}")
+        
+            # 合并所有subject的数据
+            merged_data = {}
+            for file_path in pkl_files:
+                subject_data = self.load_pickle(file_path)
+                
+                # 初始化merged_data的结构
+                if not merged_data:
+                    merged_data = {key: [] for key in subject_data.keys()}
+                
+                # 合并每个split的数据
+                for split_name, split_data in subject_data.items():
+                    merged_data[split_name].extend(split_data)
+            
+            return merged_data
+        else:
+            file_path = f"./{dataset_path}/{subject}_results.pkl"
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
         return self.load_pickle(file_path)
     
     def _load_data(self):
@@ -39,8 +63,11 @@ class MMLUPreEmbDataset(MMLUDataset):
                 dev_data = data_all[self.config.get('dev_split', 'dev')]
             
             # 为每条数据添加subject信息
-            # test_data = test_data.add_column("subject", [subj] * len(test_data))
-            # dev_data = dev_data.add_column("subject", [subj] * len(dev_data))
+            for item in test_data:
+                item["subject"] = subj
+            
+            for item in dev_data:
+                item["subject"] = subj
             
             test_datasets.extend(test_data)
             dev_datasets.extend(dev_data)

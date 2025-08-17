@@ -1,7 +1,7 @@
 _target_: src.datasets.MMLUPreEmbDataset
 config:
   name: "mmlu"
-  dataset_path: "./data/datasets/qwen3-mmlu/all_results"
+  dataset_path: "./data/datasets/deepseek-qwen3-8b/all_results"
   subjects: 
     - "all"
     # - "high_school_biology"

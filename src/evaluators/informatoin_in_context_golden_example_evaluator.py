@@ -41,7 +41,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
 
         #         [[ 1.0000e+00, -1.7881e-07],
         #         [-5.9605e-08,  1.0000e+00]]])
-        Xi_pinv = torch.linalg.pinv(Xi_matrix) # shape: (batch_size, K, K)
+        Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True) # shape: (batch_size, K, K)
         
         return Xi_matrix, Xi_pinv
     
@@ -141,7 +141,9 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         few_shot_examples = best_results["few_shot_examples"]
         lambda_1 = {last_layer_name: best_results["lambda_1"]}
         Xi_matrix = best_results["Xi_matrix"].to(self.model.device)
-        rank = {last_layer_name: torch.linalg.matrix_rank(Xi_matrix)}
+        # will not calculate rank for now
+        # rank = {last_layer_name: torch.linalg.matrix_rank(Xi_matrix)}
+        rank = {last_layer_name: torch.tensor(-1)}
 
         # 计算每个层的 \bar{\xi}(x_i, y_i)
         mean_xi_yi_embeddings = torch.mean(all_xi_yi_embeddings, dim=0)

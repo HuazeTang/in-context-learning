@@ -152,7 +152,9 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         # Xi_matrix = torch.zeros((K, K), device=all_xi_all_y_layer_emb.device, dtype=all_xi_all_y_layer_emb.dtype)
         reshaped_emb = all_xi_all_y_layer_emb.reshape(num_x * num_y, K).float()
         Xi_matrix = reshaped_emb.T @ reshaped_emb / num_x
-        Xi_pinv = torch.linalg.pinv(Xi_matrix)
+        # check whether Xi_matrix is hermitian matrix
+        assert torch.allclose(Xi_matrix, Xi_matrix.T), "Xi_matrix is not hermitian matrix"
+        Xi_pinv = torch.linalg.pinv(Xi_matrix, hermitian=True)
         
         return Xi_matrix, Xi_pinv
     
@@ -191,7 +193,9 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         
         Xi_matrix, Xi_pinv = self.solve_Xi_matrix(all_xi_all_y_layer_emb)
 
-        rank = torch.linalg.matrix_rank(Xi_matrix)
+        # jump over rank calculation
+        # rank = torch.linalg.matrix_rank(Xi_matrix, tol=1e-2)
+        rank = torch.tensor(-1)
 
         alpha = self.solve_alpha(Xi_pinv, mean_xi_yi_layer_emb)
         lambda_1 = self.solve_lambda_1_Xq_Xi_dagger(Xi_pinv, xq_embeddings)
