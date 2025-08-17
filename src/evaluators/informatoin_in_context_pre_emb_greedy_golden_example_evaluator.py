@@ -39,7 +39,7 @@ class InformationInContextPreEmbGreedyGoldenExampleEvaluator(RandomInforInContex
                 dim=0
             )
             batch_data_len = batch_samples_invs.shape[0]
-            batch_lambda_1 = self.parallel_solve_lambda_1_Xq_Xi_dagger(batch_samples_invs.float(), xq_embeddings[last_layer_name].float())
+            batch_lambda_1 = self.parallel_solve_lambda_1_Xq_Xi_dagger(batch_samples_invs, xq_embeddings[last_layer_name])
             lambda_1_all[i:i+batch_data_len] = batch_lambda_1
 
         # filter out those lambda_1 < 1

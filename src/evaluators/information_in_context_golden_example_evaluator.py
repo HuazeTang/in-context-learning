@@ -66,7 +66,7 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         batch_size, num_x, num_y, K = all_xi_all_y_embeddings.shape
         
         # Xi_matrix = torch.zeros((batch_size, K, K), device=all_xi_all_y_layer_emb.device, dtype=all_xi_all_y_layer_emb.dtype)
-        reshaped_emb = all_xi_all_y_embeddings.reshape(batch_size, num_x * num_y, K).float()
+        reshaped_emb = all_xi_all_y_embeddings.reshape(batch_size, num_x * num_y, K)
         reshaped_emb_T = reshaped_emb.transpose(-2, -1) # shape: (batch_size, K, num_x * num_y)
         Xi_matrix = torch.bmm(reshaped_emb_T, reshaped_emb) / num_x # shape: (batch_size, K, K)
         # 使用 torch.linalg.pinv 计算逆矩阵
@@ -112,16 +112,19 @@ class InformationInContextGoldenExampleEvaluator(RandomInforInContextEvaluator):
         assert Xi_pinv.shape[1:] == (K, K), f"Invalid shape for Xi_pinv: {Xi_pinv.shape}, should be (f{K}, f{K})"
 
         if num_y > K:
-            Xq_matrix = xq_embeddings.float().T @ xq_embeddings.float() # shape: (K, K)
+            Xq_matrix = xq_embeddings.T @ xq_embeddings # shape: (K, K)
             Xq_Xi_dagger_matrix = Xq_matrix[None, ...] @ Xi_pinv # shape: (batch_size, K, K)
 
             # 求解 Xq_Xi_dagger_matrix 的最大特征值
             # lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix).max(dim=-1).values # shape: (batch_size,)
-            lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix.float()) # shape: (batch_size,)
+            lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix) # shape: (batch_size,)
         else:
             # \lambda_1(x_q x_q^T \Xi^\dagger) = \lambda_1(x_q^T \Xi^\dagger x_q)
-            Xq_Xi_inv = xq_embeddings.float()[None, ...] @ Xi_pinv @ xq_embeddings.float().T[None, ...] # shape: (batch_size, K, K)
-            lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[:, -1].real
+            Xq_Xi_inv = xq_embeddings[None, ...] @ Xi_pinv @ xq_embeddings.T[None, ...] # shape: (batch_size, K, K)
+            if Xq_Xi_inv.dtype == torch.float16:
+                lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[:, -1].real
+            else:
+                lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv)[:, -1].real
 
         return lambda_1
     

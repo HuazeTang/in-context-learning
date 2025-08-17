@@ -170,7 +170,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         num_x, num_y, K = all_xi_all_y_layer_emb.shape
         
         # Xi_matrix = torch.zeros((K, K), device=all_xi_all_y_layer_emb.device, dtype=all_xi_all_y_layer_emb.dtype)
-        reshaped_emb = all_xi_all_y_layer_emb.reshape(num_x * num_y, K).float()
+        reshaped_emb = all_xi_all_y_layer_emb.reshape(num_x * num_y, K)
         Xi_matrix = reshaped_emb.T @ reshaped_emb / num_x
         # check whether Xi_matrix is hermitian matrix
         assert torch.allclose(Xi_matrix, Xi_matrix.T), "Xi_matrix is not hermitian matrix"
@@ -202,9 +202,9 @@ class RandomInforInContextEvaluator(BaseEvaluator):
         assert mean_xi_yi_layer_emb.shape == (K,), f"Invalid shape for mean_xi_yi_layer_emb: {mean_xi_yi_layer_emb.shape}"
     
         # 使用 lstsq 代替直接求逆，更快且数值稳定（弃用）
-        # alpha = torch.linalg.lstsq(Xi_matrix.float(), mean_xi_yi_layer_emb.float()).solution
+        # alpha = torch.linalg.lstsq(Xi_matrix, mean_xi_yi_layer_emb).solution
         # 直接使用逆矩阵乘法
-        alpha = Xi_pinv @ mean_xi_yi_layer_emb.float()
+        alpha = Xi_pinv @ mean_xi_yi_layer_emb
         
         return alpha
 
@@ -217,13 +217,16 @@ class RandomInforInContextEvaluator(BaseEvaluator):
 
         if num_y > K:
             # directly calculate \lambda_1
-            Xq_Xi_dagger_matrix = xq_embeddings.float().T @ (xq_embeddings.float() @ Xi_pinv) # shape: (K, K)
-            # lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix.float())[0].real
-            lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix.float())
+            Xq_Xi_dagger_matrix = xq_embeddings.T @ (xq_embeddings @ Xi_pinv) # shape: (K, K)
+            # lambda_1 = torch.linalg.eigvals(Xq_Xi_dagger_matrix)[0].real
+            lambda_1, _ = power_iteration(Xq_Xi_dagger_matrix)
         else:
             # \lambda_1(x_q x_q^T \Xi^\dagger) = \lambda_1(x_q^T \Xi^\dagger x_q)
-            Xq_Xi_inv = xq_embeddings.float() @ Xi_pinv @ xq_embeddings.float().T
-            lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[-1].real
+            Xq_Xi_inv = xq_embeddings @ Xi_pinv @ xq_embeddings.T
+            if Xq_Xi_inv.dtype == torch.float16:
+                lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv.float())[-1].real
+            else:
+                lambda_1 = torch.linalg.eigvalsh(Xq_Xi_inv)[-1].real
 
             # U, S, _ = torch.linalg.svd(xq_embeddings.T, full_matrices=False)
             # X_tmp = U.T @  Xi_pinv @ U
@@ -255,7 +258,7 @@ class RandomInforInContextEvaluator(BaseEvaluator):
     def compute_predictions(self, xq_embeddings: Dict[str, Tensor], alpha: Dict[str, Tensor]) -> Dict[str, int]:
         """计算预测结果"""
         hat_P = {
-            k: torch.matmul(xq_embeddings[k].float(), alpha[k]) 
+            k: torch.matmul(xq_embeddings[k], alpha[k]) 
             for k in alpha.keys()
         }
         
