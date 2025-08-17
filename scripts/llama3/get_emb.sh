@@ -3,7 +3,8 @@ model="llama3-8b"
 dataset="mmlu"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 method="emb_gen"
-pool_method="mean"
+pool_method="last"
+torch_dtype=float64
 
 subjects=(
     "abstract_algebra"
@@ -68,7 +69,6 @@ subjects=(
 mkdir -p log
 mkdir -p log/all_results/
 
-torch_dtype=float32
 for subject in "${subjects[@]}"; do
     experiment_name="${model}_${dataset}-${subject}_${method}_{$pool_method}"
     python3 main.py evaluation=emb_gen model=llama model.config.torch_dtype=$torch_dtype dataset.config.subjects="[$subject]" evaluation.config.pool_method=${pool_method} | tee "log/${experiment_name}.txt"
