@@ -6,7 +6,7 @@ method="infor_random"
 experiment_name="${model}_${dataset}_${method}"
 
 mkdir -p log
-python3 main.py evaluation=infor_random_in_context | tee "log/${experiment_name}.txt"
+python3 main.py evaluation=infor_random_in_context dataset="${dataset}" | tee "log/${experiment_name}.txt"
 
 if [ -f "scripts/s3upload.sh" ]; then
     bash scripts/s3upload.sh "log/${experiment_name}"

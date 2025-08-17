@@ -6,7 +6,7 @@ method="infor-golden-compare"
 experiment_name="${model}_${dataset}_${method}"
 
 mkdir -p log
-python3 main.py evaluation=infor_golden_compare_in_context dataset.config.max_test_samples=100 | tee "log/${experiment_name}.txt"
+python3 main.py evaluation=infor_golden_compare_in_context dataset.config.max_test_samples=100 dataset="${dataset}" | tee "log/${experiment_name}.txt"
 
 if [ -f "scripts/s3upload.sh" ]; then
     bash scripts/s3upload.sh "log/${experiment_name}"

@@ -1,0 +1,11 @@
+_target_: src.datasets.GPQADataset
+config:
+  name: "gpqa"
+  dataset_path: "/root/autodl-tmp/data/datasets/Idavidrein/gpqa"
+  subjects: []  # gpqa不直接用subject划分 加上这个避免访问出错
+  config_name: gpqa_main # "gpqa_main"（主测试集）"gpqa_extended"（扩展版）"gpqa_diamond"（最难的子集）"gpqa_experts"（专家版）
+  dev_ratio: 0.25
+  dev_split: "dev"
+  test_split: "test"
+  max_test_samples: -1  # 不限制样本数
+  random_seed: 42
