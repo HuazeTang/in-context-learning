@@ -1,9 +1,12 @@
-_target_: src.datasets.MMLUDataset
+_target_: src.datasets.MMLUProDataset
 config:
-  name: "mmlu"
-  dataset_path: "./data/datasets/TIGER-Lab"
-  subjects: 
-    - "all"
+  name: "mmlu_pro"
+  dataset_path: "/root/autodl-tmp/data/datasets/TIGER-Lab/MMLU-Pro"
+  subjects:
+    - "high_school_biology"
+    - "high_school_chemistry"
+    - "high_school_physics"
+    - "college_mathematics"
   dev_split: "dev"
   test_split: "test"
   max_test_samples: 5000

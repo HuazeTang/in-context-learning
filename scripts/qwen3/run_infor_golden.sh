@@ -1,4 +1,5 @@
-model="qwen3-8b"
+#model="qwen3-8b"
+model="qwen3-14b"
 dataset="mmlu"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 
@@ -6,7 +7,7 @@ method="infor-golden"
 experiment_name="${model}_${dataset}_${method}"
 
 mkdir -p log
-python3 main.py evaluation=infor_golden_in_context model=qwen | tee "log/${experiment_name}.txt"
+python3 main.py evaluation=infor_golden_in_context model=qwen dataset="${dataset}" | tee "log/${experiment_name}.txt"
 
 if [ -f "scripts/s3upload.sh" ]; then
     bash scripts/s3upload.sh "log/${experiment_name}"

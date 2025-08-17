@@ -1,0 +1,21 @@
+_target_: src.models.qwen_model.QwenModel
+config:
+  type: qwen
+  model_path: "/root/autodl-tmp/data/model_ckpts/Qwen/Qwen3-14B"
+  tokenizer_path: "/root/autodl-tmp/data/model_ckpts/Qwen/Qwen3-14B"
+  torch_dtype: float16
+  device_map: "cuda:0"
+  enable_thinking: false  # 控制是否启用思考模式
+  terminators:
+    - "</s>"
+    - "<|endoftext|>"
+  chat_template: "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n' + message['content'] + '<|eot_id|>' }}{% endfor %}{% if add_generation_prompt %}{{'<|start_header_id|>assistant<|end_header_id|>\n\n'}}{% endif %}"
+  generation_params:
+    max_new_tokens: 256
+    temperature: 0.3
+    top_p: 0.9
+    do_sample: true
+    eos_token_id: 151645
+    output_hidden_states: false
+    return_dict_in_generate: false
+  layer_num: 36
