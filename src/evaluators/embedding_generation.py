@@ -9,7 +9,10 @@ class EmbeddingGenerationEvaluator(RandomInforInContextEvaluator):
     def evaluate_single_example(self, test_item: Dict[str, Any], extraction_layers: List[str], pool_method: str) -> Dict[str, Any]:
         xq_embeddings, _ = self.sample_embeddings(test_item, extraction_layers, pool_method)
         xq_embeddings = xq_embeddings[0]
-
+        xq_embeddings = {
+            key: value.cpu() for key, value in xq_embeddings.items()
+        }
+        
         question = test_item['question']
         answer = test_item['answer']
         return {

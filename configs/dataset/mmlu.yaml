@@ -1,7 +1,7 @@
 _target_: src.datasets.MMLUDataset
 config:
   name: "mmlu"
-  dataset_path: "/root/autodl-tmp/data/datasets/cais/mmlu"
+  dataset_path: "./data/datasets/cais/mmlu"
   subjects: 
     # - "all"
     - "high_school_biology"
