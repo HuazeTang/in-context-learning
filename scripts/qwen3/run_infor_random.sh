@@ -1,5 +1,4 @@
-#model="qwen3-8b"
-model="qwen3-14b"
+model="qwen3-8b"
 dataset="mmlu"
 bash scripts/download_model_dataset.sh ${model} ${dataset}
 
