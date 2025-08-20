@@ -9,8 +9,9 @@ class RandomInforInContextEvaluatorPreEmb(RandomInforInContextEvaluator):
     def sample_embeddings(self, examples, extraction_layers, pool_method):
         r"""获得 \xi(x_Q)"""
         xq_embeddings_all = examples['embedding']
-        if xq_embeddings_all.dtype == torch.float16:
-            xq_embeddings_all = xq_embeddings_all.float()
+        for layer_name in xq_embeddings_all.keys():
+            if xq_embeddings_all[layer_name].dtype == torch.float16:
+                xq_embeddings_all[layer_name] = xq_embeddings_all[layer_name].float()
         return [{layer_name: xq_embeddings_all[layer_name] for layer_name in extraction_layers}], None
 
     def get_all_xi_all_y_embeddings(self, few_shot_examples, extraction_layers):
