@@ -1,8 +1,8 @@
 _target_: src.models.deepseek_model.DeepSeekModel
 config:
   type: deepseek
-  model_path: "./data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
-  tokenizer_path: "./data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+  model_path: "/root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+  tokenizer_path: "/root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
   torch_dtype: float16
   device_map: "cuda:0"
   # enable_thinking: false  # 控制是否启用思考模式

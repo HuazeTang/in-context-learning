@@ -64,16 +64,17 @@ class MMLUProDataset(BaseDataset):
 # mmlu pro的数据格式{
 #   "question": "...",
 #   "options": ["A", "B", "C", "D"],
-#   "answer": 1,
-#   "subject": "high_school_biology"
+#   "answer": A,
+#   "answer_index": 0,
+#   "category": "engineering"
 # }这里是options此外直接返回选项不必处理
 
     def get_all_possible_answers(self, example):
         return example["options"]
 
     def get_ground_truth_index(self, example):
-        # 直接返回字母
-        return example["answer"]
+        # 直接返回字母索引
+        return example["answer_index"]
 
     def format_question(self, example):
         question = example["question"]
