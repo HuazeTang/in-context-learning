@@ -28,6 +28,24 @@ def power_iteration(matrix_input: torch.Tensor, max_iter=1000, tol=1e-6):
     lambda_1 = torch.dot(v, Mv)
     return lambda_1, v
 
+def normalize_xi_with_svd(emb_all_y: Tensor, K: int=None):
+    r"""Apply SVD to emb_all_y to get \xi matrix
+    Condition on \xi matrix:
+    \xi_1(x,y) = \frac{1}{\sqrt{num_y}}, \forall x, y
+    \sum_y \xi_k(x,y) = 0, \forall k \in [2, K], \forall x, y
+    \sum_y \xi_k^2(x,y) = 1, \forall k \in [2, K], \forall x)
+    
+    Args:
+    emb_all_y: matrix of shape (M, D)
+    K: the final dimension of \xi matrix, if None will be D
+    
+    Returns:
+    xi_matrix: the normalized \xi matrix of shape (M, K)
+    """
+    M, D = emb_all_y.shape
+    if K is None:
+        K = D
+
 class RandomInforInContextEvaluator(BaseEvaluator):
     def build_prompt_with_answer(self, question: str, answer: str):
         return f"{question}\nAnswer: {answer}\n\n"
@@ -92,11 +110,12 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             # stack所有embeddings并标准化
             emb_all_y = torch.cat(embeddings_list, dim=0)  # shape: (num_y, K)
 
-                # 标准化处理
-            emb_all_y = emb_all_y - torch.mean(emb_all_y, dim=0, keepdim=True)
-            norms = torch.norm(emb_all_y, dim=0, keepdim=True)
-            norms = torch.where(norms == 0, torch.ones_like(norms), norms) # 避免除零
-            xi_all_y_text_embeddings[layer_name] = emb_all_y / norms
+            # 标准化处理
+            # emb_all_y = emb_all_y - torch.mean(emb_all_y, dim=0, keepdim=True)
+            # norms = torch.norm(emb_all_y, dim=0, keepdim=True)
+            # norms = torch.where(norms == 0, torch.ones_like(norms), norms) # 避免除零
+            # xi_all_y_text_embeddings[layer_name] = emb_all_y / norms
+            xi_all_y_text_embeddings[layer_name] = emb_all_y
 
             # get yi embedding
             xi_yi_embeddings[layer_name] = xi_all_y_text_embeddings[layer_name][true_y_index]
