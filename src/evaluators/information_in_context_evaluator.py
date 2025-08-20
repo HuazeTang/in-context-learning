@@ -69,7 +69,10 @@ class RandomInforInContextEvaluator(BaseEvaluator):
             for k, v in hidden_state.items():
                 if k not in extraction_layers:
                     continue
-                single_pool_hidden_state[k] = self.pool_embedding(v, pool_method)
+                pooled_hidden_state = self.pool_embedding(v, pool_method)
+                if pooled_hidden_state.dtype == torch.float16:
+                    pooled_hidden_state = pooled_hidden_state.float()
+                single_pool_hidden_state[k] = pooled_hidden_state
             pool_hidden_state.append(single_pool_hidden_state)
 
         return pool_hidden_state
