@@ -1,0 +1,11 @@
+/huggingface.co
+/data
+/outputs
+/results
+*/__pycache__
+*/*/__pycache__
+/job
+.hopeignore
+/scripts/download_model_dataset_hope.sh
+/scripts/s3upload.sh
+*.txt

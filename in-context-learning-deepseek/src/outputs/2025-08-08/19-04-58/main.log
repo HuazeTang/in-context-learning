@@ -1,0 +1,66 @@
+[2025-08-08 19:04:58,667][__main__][INFO] - Configuration:
+model:
+  _target_: src.models.deepseek_model.DeepSeekModel
+  config:
+    type: deepseek
+    model_path: /root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+    tokenizer_path: /root/autodl-tmp/data/model_ckpts/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+    torch_dtype: float16
+    device_map: cuda:0
+    terminators:
+    - </s>
+    - <|endoftext|>
+    chat_template: '{% for message in messages %}{{''<|start_header_id|>'' + message[''role'']
+      + ''<|end_header_id|>
+
+
+      '' + message[''content''] + ''<|eot_id|>'' }}{% endfor %}{% if add_generation_prompt
+      %}{{''<|start_header_id|>assistant<|end_header_id|>
+
+
+      ''}}{% endif %}'
+    generation_params:
+      max_new_tokens: 256
+      temperature: 0.3
+      top_p: 0.9
+      do_sample: true
+      eos_token_id: 151645
+      output_hidden_states: false
+      return_dict_in_generate: false
+    layer_num: 32
+dataset:
+  _target_: src.datasets.MMLUDataset
+  config:
+    name: mmlu
+    dataset_path: /root/autodl-tmp/data/datasets/cais/mmlu
+    subjects:
+    - high_school_biology
+    - high_school_chemistry
+    - high_school_physics
+    - college_mathematics
+    dev_split: dev
+    test_split: test
+    max_test_samples: 5000
+    random_seed: 42
+evaluation:
+  _target_: src.evaluators.information_in_context_golden_example_prompt_evaluator.InformationInContextGoldenExamplePromptEvaluator
+  config:
+    name: random_in_context
+    system_prompt: You are an expert answering multiple choice questions. Analyze
+      the question carefully and select the ONE correct option. Output ONLY the capital
+      letter of your choice with NO additional text or explanation.
+    num_shots: 5
+    output_dir: ${hydra:runtime.output_dir}/results/
+    extract_hidden_states: false
+    golden_examples_sample_times: 10
+
+[2025-08-08 19:04:58,668][__main__][INFO] - Loading deepseek model...
+[2025-08-08 19:05:06,238][__main__][INFO] - Loading mmlu dataset with subject ['high_school_biology', 'high_school_chemistry', 'high_school_physics', 'college_mathematics']
+[2025-08-08 19:05:09,992][__main__][INFO] - Dev dataset size: 20
+[2025-08-08 19:05:09,993][__main__][INFO] - Test dataset size: 764
+[2025-08-08 19:05:09,993][__main__][INFO] - Loading random_in_context evaluator
+[2025-08-08 19:05:10,004][__main__][INFO] - 
+Starting evaluation...
+[2025-08-08 19:06:49,726][__main__][INFO] - 1/764: layer_32: 1.00; 
+[2025-08-08 19:08:25,840][__main__][INFO] - 2/764: layer_32: 1.00; 
+[2025-08-08 19:10:01,477][__main__][INFO] - 3/764: layer_32: 0.67; 
