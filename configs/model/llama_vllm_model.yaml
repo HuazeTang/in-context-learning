@@ -1,9 +1,9 @@
-_target_: src.models.llama_model.LLaMAModel
+_target_: src.models.llama_vllm_model.LLaMAVLLMModel
 config:
   type: llama
-  model_path: "./data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct"
-  tokenizer_path: "./data/model_ckpts/meta-llama/Meta-Llama-3-8B-Instruct"
-  torch_dtype: bfloat16
+  model_path: "/root/autodl-tmp/hf_cache/meta-llama/Meta-Llama-3-8B-Instruct"
+  tokenizer_path: "/root/autodl-tmp/hf_cache/meta-llama/Meta-Llama-3-8B-Instruct"
+  torch_dtype: float16
   device_map: "cuda:0"
   terminators:
     - "<|eot_id|>"

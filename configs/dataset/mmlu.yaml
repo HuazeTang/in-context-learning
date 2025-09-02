@@ -1,14 +1,14 @@
 _target_: src.datasets.MMLUDataset
 config:
   name: "mmlu"
-  dataset_path: "./data/datasets/cais/mmlu"
+  dataset_path: "/root/autodl-tmp/hf_cache/datasets/cais/mmlu"
   subjects: 
-    # - "all"
-    - "high_school_biology"
-    - "high_school_chemistry"  
-    - "high_school_physics"
-    - "college_mathematics"
+    - "all"
+    # - "high_school_biology"
+    # - "high_school_chemistry"  
+    # - "high_school_physics"
+    # - "college_mathematics"
   dev_split: "dev"
   test_split: "test"
-  max_test_samples: 5000
+  max_test_samples: 500000
   random_seed: 42
