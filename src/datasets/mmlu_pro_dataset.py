@@ -25,7 +25,7 @@ class MMLUProDataset(BaseDataset):
 
             # 固定 validation 作为 dev 因为mmlu pro没有dev只有valid 和 test 用valid替代dev
             test_split_name = self.config.get('test_split', 'test')
-            dev_split_name = 'validation'
+            dev_split_name = self.config.get('test_split', 'validation')
 
             if test_split_name not in raw_dataset:
                 raise ValueError(f"Test split '{test_split_name}' not found for subject {subj}")
@@ -61,13 +61,13 @@ class MMLUProDataset(BaseDataset):
 
     def get_test_examples(self):
         return self.test_data
-# mmlu pro的数据格式{
-#   "question": "...",
-#   "options": ["A", "B", "C", "D"],
-#   "answer": 1,
-#   "subject": "high_school_biology"
-# }这里是options此外直接返回选项不必处理
-
+    
+    # mmlu pro的数据格式{
+    #   "question": "...",
+    #   "options": ["A", "B", "C", "D"],
+    #   "answer": 1,
+    #   "subject": "high_school_biology"
+    # }这里是options此外直接返回选项不必处理
     def get_all_possible_answers(self, example):
         return example["options"]
 

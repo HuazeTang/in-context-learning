@@ -1,20 +1,23 @@
-_target_: src.models.llama_model.LLaMAModel
+_target_: src.models.qwen_model.QwenModel
 config:
-  type: llama
-  model_path: "/root/autodl-tmp/hf_cache/meta-llama/Meta-Llama-3-8B-Instruct"
-  tokenizer_path: "/root/autodl-tmp/hf_cache/meta-llama/Meta-Llama-3-8B-Instruct"
+  type: qwen
+  model_path: "/root/autodl-tmp/hf_cache/Qwen/Qwen3-8B"
+  tokenizer_path: "/root/autodl-tmp/hf_cache/Qwen/Qwen3-8B"
   torch_dtype: bfloat16
   device_map: "cuda:0"
+  enable_thinking: false  # 控制是否启用思考模式
   terminators:
-    - "<|eot_id|>"
-    - "<|end_of_text|>"
+    - "</s>"
+    - "<|endoftext|>"
+    - "<|im_end|>"
   chat_template: "{% for message in messages %}{{'<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n' + message['content'] + '<|eot_id|>' }}{% endfor %}{% if add_generation_prompt %}{{'<|start_header_id|>assistant<|end_header_id|>\n\n'}}{% endif %}"
   generation_params:
     max_new_tokens: 256
-    temperature: 0.3
-    top_p: 0.9
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
     do_sample: true
-    eos_token_id: 128009
+    eos_token_id: 151645
     output_hidden_states: false
     return_dict_in_generate: false
-  layer_num: 32
+  layer_num: 36

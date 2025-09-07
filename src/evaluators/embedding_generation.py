@@ -13,14 +13,9 @@ class EmbeddingGenerationEvaluator(RandomInforInContextEvaluator):
             key: value.cpu() for key, value in xq_embeddings.items()
         }
         
-        question = test_item['question']
-        answer = test_item['answer']
-        return {
-            'question': question, 
-            'answer': answer, 
-            'choices': test_item['choices'],
-            'embedding': xq_embeddings
-        }
+        eval_result = test_item.copy()
+        eval_result.update( {'embedding': xq_embeddings})
+        return eval_result
     
     def evaluate(self, output_dir: str = None):
         test_data = self.dataset.get_test_examples()
